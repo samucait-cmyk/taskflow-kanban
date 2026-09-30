@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  base: './', // <--- Adicione esta linha para garantir que os caminhos dos estilos e scripts funcionam perfeitamente!
   plugins: [
     react(),
     VitePWA({
@@ -14,7 +15,7 @@ export default defineConfig({
         description: 'Gerencie seus projetos com agilidade',
         theme_color: '#0f172a',
         background_color: '#0f172a',
-        display: 'standalone', // <--- Isto garante que abre em ecrã inteiro sem barras de navegação!
+        display: 'standalone',
         scope: '/',
         start_url: '/',
         icons: [
