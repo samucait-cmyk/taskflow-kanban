@@ -1,10 +1,19 @@
 import PomodoroTimer from './PomodoroTimer'
 
-export default function Header({ onNewTask, onIncreaseFont, onDecreaseFont, currentFontSize }) {
+export default function Header({
+  onNewTask,
+  onIncreaseFont,
+  onDecreaseFont,
+  currentFontSize,
+  isFocusMode,
+  onToggleFocusMode,
+  theme,
+  setTheme,
+}) {
   return (
     <header className="bg-slate-900/90 border-b border-slate-800 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-6 py-3">
       <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
-        {/* Esquerda: Logo & Marca + Botões A- / A+ (Apenas Mobile/Tablet) */}
+        {/* Esquerda: Logo & Marca + Ajuste de Texto (Apenas Mobile/Tablet) */}
         <div className="flex items-center justify-between w-full md:w-auto gap-3 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="bg-gradient-to-tr from-indigo-600 to-violet-500 text-white p-2 rounded-2xl font-extrabold text-lg shadow-lg shadow-indigo-500/25">
@@ -25,7 +34,7 @@ export default function Header({ onNewTask, onIncreaseFont, onDecreaseFont, curr
             </div>
           </div>
 
-          {/* Botões Aumentar (A+) e Diminuir (A-) Texto: Oculto no Desktop (lg:hidden) */}
+          {/* Ajuste de Texto para Mobile / Tablet */}
           <div className="flex lg:hidden items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
             <span className="text-[10px] text-slate-400 px-1 font-semibold hidden xs:inline">
               Texto:
@@ -52,8 +61,38 @@ export default function Header({ onNewTask, onIncreaseFont, onDecreaseFont, curr
           <PomodoroTimer />
         </div>
 
-        {/* Direita: Botão Nova Tarefa */}
-        <div className="flex items-center gap-3 shrink-0">
+        {/* Direita: Seletor de Tema + Modo Foco + Botão Nova Tarefa */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          {/* Seletor de Tema de Cor */}
+          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-2xl border border-slate-800 text-xs">
+            <span className="text-[10px] text-slate-400 px-1 font-medium hidden sm:inline">
+              🎨 Tema:
+            </span>
+            <select
+              value={theme}
+              onChange={(e) => setTheme(e.target.value)}
+              className="bg-slate-900 text-slate-200 border border-slate-800 rounded-xl px-2 py-1 text-xs focus:outline-none cursor-pointer"
+            >
+              <option value="slate">🌙 Slate Indigo</option>
+              <option value="emerald">🟢 Midnight Emerald</option>
+              <option value="obsidian">🟣 Obsidian Violet</option>
+              <option value="light">☀️ Clean Light</option>
+            </select>
+          </div>
+
+          <button
+            onClick={onToggleFocusMode}
+            title={isFocusMode ? 'Sair do Modo Foco' : 'Ativar Modo Foco (Oculta painéis)'}
+            className={`px-3 py-2 rounded-2xl text-xs font-semibold border transition-all cursor-pointer flex items-center gap-1.5 ${
+              isFocusMode
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-lg shadow-amber-500/10'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700/60'
+            }`}
+          >
+            <span>{isFocusMode ? '👁️' : '🧘'}</span>
+            <span className="hidden sm:inline">{isFocusMode ? 'Exibir Dashboard' : 'Modo Foco'}</span>
+          </button>
+
           <button
             onClick={onNewTask}
             className="flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition-all shadow-lg shadow-indigo-500/25 cursor-pointer"

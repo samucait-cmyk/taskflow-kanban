@@ -24,6 +24,14 @@ const DEFAULT_WIP_LIMITS = {
   done: 10,
 }
 
+// Configuração de temas de cores
+const THEME_CLASSES = {
+  slate: 'bg-slate-950 text-slate-100',
+  emerald: 'bg-zinc-950 text-emerald-100',
+  obsidian: 'bg-neutral-950 text-purple-100',
+  light: 'bg-slate-100 text-slate-900',
+}
+
 export default function App() {
   const [tasks, setTasks] = useState(() => {
     const saved = localStorage.getItem('taskflow_tasks')
@@ -52,7 +60,7 @@ export default function App() {
         status: 'todo',
         priority: 'Média',
         tag: 'Frontend',
-        dueDate: '2026-10-15',
+        dueDate: '2026-09-01',
         checklist: [
           { text: 'Criar login_fase 1', completed: true },
           { text: 'Criar a senha', completed: false },
@@ -71,7 +79,6 @@ export default function App() {
     ]
   })
 
-  // Limites WIP por coluna personalizáveis
   const [wipLimits, setWipLimits] = useState(() => {
     const saved = localStorage.getItem('taskflow_wip_limits')
     if (saved) {
@@ -84,13 +91,20 @@ export default function App() {
     return DEFAULT_WIP_LIMITS
   })
 
-  // Estados de Filtro, Fonte, Ordenação e Vista
+  // Estado do Tema de Cores
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('taskflow_theme') || 'slate'
+  })
+
+  // Filtros e Modos Visuais
   const [search, setSearch] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('')
   const [tagFilter, setTagFilter] = useState('')
   const [sortBy, setSortBy] = useState('default')
   const [viewMode, setViewMode] = useState('kanban')
   const [fontSize, setFontSize] = useState(16)
+  const [onlyOverdue, setOnlyOverdue] = useState(false)
+  const [isFocusMode, setIsFocusMode] = useState(false)
 
   // Modais e Toasts
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -122,9 +136,13 @@ export default function App() {
     localStorage.setItem('taskflow_wip_limits', JSON.stringify(wipLimits))
   }, [wipLimits])
 
+  useEffect(() => {
+    localStorage.setItem('taskflow_theme', theme)
+  }, [theme])
+
   const handleUpdateWipLimit = (columnId, newLimit) => {
     setWipLimits((prev) => ({ ...prev, [columnId]: newLimit }))
-    showToast(`Limite WIP da coluna atualizado para ${newLimit}!`)
+    showToast(`Limite WIP atualizado para ${newLimit}!`)
   }
 
   const handleClearFilters = () => {
@@ -132,10 +150,11 @@ export default function App() {
     setPriorityFilter('')
     setTagFilter('')
     setSortBy('default')
+    setOnlyOverdue(false)
     showToast('Filtros redefinidos!', 'info')
   }
 
-  // Lógica de Filtragem
+  // Filtragem
   const filteredTasks = tasks.filter((task) => {
     const matchesSearch =
       task.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -143,10 +162,22 @@ export default function App() {
     const matchesPriority = priorityFilter ? task.priority === priorityFilter : true
     const matchesTag = tagFilter ? task.tag === tagFilter : true
 
-    return matchesSearch && matchesPriority && matchesTag
+    let matchesOverdue = true
+    if (onlyOverdue) {
+      if (!task.dueDate || task.status === 'done') {
+        matchesOverdue = false
+      } else {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const due = new Date(task.dueDate + 'T00:00:00')
+        matchesOverdue = due < today
+      }
+    }
+
+    return matchesSearch && matchesPriority && matchesTag && matchesOverdue
   })
 
-  // Lógica de Ordenação
+  // Ordenação
   const sortedTasks = [...filteredTasks].sort((a, b) => {
     if (sortBy === 'priority') {
       const weights = { Urgente: 4, Alta: 3, Média: 2, Baixa: 1 }
@@ -202,7 +233,18 @@ export default function App() {
     )
   }
 
-  // Exportar Backup JSON
+  const handleAddSubtaskInline = (taskId, text) => {
+    setTasks(
+      tasks.map((task) => {
+        if (task.id !== taskId) return task
+        const updatedChecklist = [...(task.checklist || []), { text, completed: false }]
+        return { ...task, checklist: updatedChecklist }
+      })
+    )
+    showToast('Subtarefa adicionada!')
+  }
+
+  // Backups
   const handleExportBackup = () => {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(tasks, null, 2))
     const downloadAnchor = document.createElement('a')
@@ -211,16 +253,14 @@ export default function App() {
     document.body.appendChild(downloadAnchor)
     downloadAnchor.click()
     downloadAnchor.remove()
-    showToast('Backup JSON exportado com sucesso!')
+    showToast('Backup JSON exportado!')
   }
 
-  // Exportar Planilha CSV
   const handleExportCSV = () => {
     if (tasks.length === 0) {
-      showToast('Sem tarefas para exportar em CSV.', 'error')
+      showToast('Sem tarefas para exportar.', 'error')
       return
     }
-
     const headers = ['ID', 'Título', 'Descrição', 'Status', 'Prioridade', 'Tag', 'Data Limite']
     const rows = tasks.map((t) => [
       t.id,
@@ -240,10 +280,9 @@ export default function App() {
     document.body.appendChild(link)
     link.click()
     link.remove()
-    showToast('Planilha CSV gerada com sucesso!')
+    showToast('Planilha CSV gerada!')
   }
 
-  // Importar Backup JSON
   const handleImportBackup = (e) => {
     const fileReader = new FileReader()
     if (e.target.files && e.target.files[0]) {
@@ -253,26 +292,29 @@ export default function App() {
           const importedTasks = JSON.parse(event.target.result)
           if (Array.isArray(importedTasks)) {
             setTasks(importedTasks)
-            showToast('Backup importado com sucesso!')
+            showToast('Backup importado!')
           } else {
-            showToast('Formato de ficheiro inválido.', 'error')
+            showToast('Ficheiro inválido.', 'error')
           }
         } catch (error) {
-          showToast('Erro ao ler o ficheiro JSON.', 'error')
+          showToast('Erro ao ler ficheiro.', 'error')
         }
       }
     }
   }
 
-  const hasActiveFilters = search || priorityFilter || tagFilter || sortBy !== 'default'
+  const hasActiveFilters = search || priorityFilter || tagFilter || sortBy !== 'default' || onlyOverdue
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white transition-all">
-      {/* Cabeçalho */}
+    <div className={`min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white transition-all ${THEME_CLASSES[theme] || THEME_CLASSES.slate}`}>
       <Header
         onIncreaseFont={handleIncreaseFont}
         onDecreaseFont={handleDecreaseFont}
         currentFontSize={fontSize}
+        isFocusMode={isFocusMode}
+        onToggleFocusMode={() => setIsFocusMode(!isFocusMode)}
+        theme={theme}
+        setTheme={setTheme}
         onNewTask={() => {
           setEditingTask(null)
           setIsModalOpen(true)
@@ -280,22 +322,29 @@ export default function App() {
       />
 
       <main className="flex-1 p-4 sm:p-6 max-w-[1600px] w-full mx-auto flex flex-col gap-6">
-        {/* Título do Painel */}
-        <div className="flex flex-col gap-1">
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-100 flex items-center gap-2">
-            🚀 Taskflow Dashboard
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400">
-            Gerencie suas tarefas com eficiência, foco e produtividade máxima.
-          </p>
-        </div>
+        {/* Painéis Superiores */}
+        {!isFocusMode && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex flex-col gap-6"
+          >
+            <div className="flex flex-col gap-1">
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight flex items-center gap-2">
+                🚀 Taskflow Dashboard
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-400">
+                Gerencie suas tarefas com eficiência, foco e produtividade máxima.
+              </p>
+            </div>
 
-        {/* Dashboard de Indicadores */}
-        <Dashboard tasks={tasks} />
+            <Dashboard tasks={tasks} />
+          </motion.div>
+        )}
 
-        {/* Barra de Filtros, Ordenação, Backups e Ferramentas */}
+        {/* Barra de Filtros */}
         <div className="flex flex-col lg:flex-row items-center gap-3 bg-slate-900/80 p-3.5 sm:p-4 rounded-2xl border border-slate-800/80 shadow-lg">
-          {/* Campo de Pesquisa */}
           <div className="relative flex-1 w-full">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm">
               🔍
@@ -343,10 +392,22 @@ export default function App() {
               onChange={(e) => setSortBy(e.target.value)}
               className="col-span-2 sm:col-span-1 w-full sm:w-auto px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-indigo-300 font-medium text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
             >
-              <option value="default">↕️ Ordenar: Padrão</option>
+              <option value="default">↕ Ordenar: Padrão</option>
               <option value="priority">⚡ Prioridade (Alta → Baixa)</option>
               <option value="dueDate">📅 Data Limite (Mais Urgente)</option>
             </select>
+
+            {/* Botão Atrasadas */}
+            <button
+              onClick={() => setOnlyOverdue(!onlyOverdue)}
+              className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                onlyOverdue
+                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-md'
+                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+              }`}
+            >
+              ⚠️ Atrasadas
+            </button>
 
             {/* Limpar Filtros */}
             {hasActiveFilters && (
@@ -358,7 +419,7 @@ export default function App() {
               </button>
             )}
 
-            {/* Botões de Exportação/Importação */}
+            {/* Backups */}
             <div className="col-span-2 sm:col-span-auto flex items-center gap-1.5 w-full sm:w-auto">
               <button
                 onClick={handleExportBackup}
@@ -419,12 +480,12 @@ export default function App() {
           </div>
         </div>
 
-        {/* Contador de tarefas filtradas */}
+        {/* Contador */}
         <div className="text-xs text-slate-400 font-medium px-1">
           Mostrando <span className="text-slate-200 font-bold">{sortedTasks.length}</span> de {tasks.length} tarefas
         </div>
 
-        {/* Visualização Kanban ou Tabela */}
+        {/* Kanban ou Tabela */}
         <AnimatePresence mode="wait">
           {viewMode === 'kanban' ? (
             <motion.div
@@ -448,6 +509,7 @@ export default function App() {
                     onMove={handleStatusChange}
                     onStatusChange={handleStatusChange}
                     onToggleChecklist={handleToggleChecklist}
+                    onAddSubtaskInline={handleAddSubtaskInline}
                     onUpdateWipLimit={handleUpdateWipLimit}
                     onQuickAdd={(colId) => {
                       setEditingTask({ status: colId })
@@ -468,7 +530,7 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      {/* Modal de Tarefas */}
+      {/* Modal */}
       <TaskModal
         isOpen={isModalOpen}
         onClose={() => {
@@ -480,7 +542,7 @@ export default function App() {
         allTasks={tasks}
       />
 
-      {/* Toast Notifications */}
+      {/* Toast */}
       <AnimatePresence>
         {toast && (
           <motion.div
