@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import Header from './components/Header'
 import KanbanColumn from './components/KanbanColumn'
@@ -19,6 +19,8 @@ export default function App() {
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
+
+  const fileInputRef = useRef(null)
 
   // Aplica o tamanho de fonte globalmente no documento (raiz html)
   useEffect(() => {
@@ -100,6 +102,38 @@ export default function App() {
     )
   }
 
+  // Funcionalidade de Exportar Backup (JSON)
+  const handleExportBackup = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tasks, null, 2))
+    const downloadAnchor = document.createElement('a')
+    downloadAnchor.setAttribute("href", dataStr)
+    downloadAnchor.setAttribute("download", `taskflow_backup_${new Date().toISOString().split('T')[0]}.json`)
+    document.body.appendChild(downloadAnchor)
+    downloadAnchor.click()
+    downloadAnchor.remove()
+  }
+
+  // Funcionalidade de Importar Backup (JSON)
+  const handleImportBackup = (e) => {
+    const fileReader = new FileReader()
+    if (e.target.files && e.target.files[0]) {
+      fileReader.readAsText(e.target.files[0], "UTF-8")
+      fileReader.onload = (event) => {
+        try {
+          const importedTasks = JSON.parse(event.target.result)
+          if (Array.isArray(importedTasks)) {
+            setTasks(importedTasks)
+            alert("Backup importado com sucesso!")
+          } else {
+            alert("Formato de ficheiro inválido.")
+          }
+        } catch (error) {
+          alert("Erro ao ler o ficheiro JSON.")
+        }
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white">
       <Header
@@ -112,7 +146,7 @@ export default function App() {
         {/* Dashboard de Indicadores */}
         <Dashboard tasks={tasks} />
 
-        {/* Barra de Filtros e Ordenação */}
+        {/* Barra de Filtros, Ordenação e Gestão de Backups */}
         <div className="flex flex-col lg:flex-row items-center gap-3 bg-slate-900/80 p-3.5 sm:p-4 rounded-2xl border border-slate-800/80 shadow-lg">
           <div className="relative flex-1 w-full">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm">
@@ -127,7 +161,7 @@ export default function App() {
             />
           </div>
 
-          <div className="grid grid-cols-2 sm:flex items-center gap-3 w-full lg:w-auto">
+          <div className="grid grid-cols-2 sm:flex items-center gap-3 w-full lg:w-auto flex-wrap">
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
@@ -159,6 +193,33 @@ export default function App() {
               <option value="priority">⚡ Prioridade (Alta → Baixa)</option>
               <option value="dueDate">📅 Data Limite (Mais Urgente)</option>
             </select>
+
+            {/* Botões de Backup corporativo */}
+            <div className="col-span-2 sm:col-span-auto flex items-center gap-2 w-full sm:w-auto">
+              <button
+                onClick={handleExportBackup}
+                title="Descarregar backup em JSON"
+                className="flex-1 sm:flex-none px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                💾 Exportar
+              </button>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImportBackup}
+                accept=".json"
+                className="hidden"
+              />
+
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                title="Carregar backup de ficheiro JSON"
+                className="flex-1 sm:flex-none px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                📂 Importar
+              </button>
+            </div>
           </div>
         </div>
 
