@@ -50,8 +50,25 @@ export default function KanbanColumn({
 }) {
   const currentIndex = STATUS_FLOW.indexOf(status)
 
+  // Eventos de Drag and Drop para a Coluna
+  const handleDragOver = (e) => {
+    e.preventDefault()
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    const taskId = e.dataTransfer.getData('text/plain')
+    if (taskId) {
+      onMove(taskId, status)
+    }
+  }
+
   return (
-    <div className="flex-1 w-full min-w-[280px] bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 sm:p-5 flex flex-col min-h-[500px]">
+    <div
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      className="flex-1 w-full min-w-[280px] bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 sm:p-5 flex flex-col min-h-[500px] transition-colors"
+    >
       {/* Cabeçalho da Coluna */}
       <div className={`flex items-center justify-between pb-3 mb-4 border-b-2 ${color}`}>
         <div className="flex items-center gap-2.5">
@@ -73,7 +90,7 @@ export default function KanbanColumn({
               exit={{ opacity: 0 }}
               className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-800/80 rounded-xl p-6 text-center text-slate-500 min-h-[160px]"
             >
-              <p className="text-xs sm:text-sm">Nenhuma tarefa aqui</p>
+              <p className="text-xs sm:text-sm">Arraste tarefas para aqui ou crie uma nova</p>
             </motion.div>
           ) : (
             tasks.map((task) => {
@@ -82,16 +99,23 @@ export default function KanbanColumn({
               const linkedTask = allTasks?.find((t) => t.id === task.linkedTaskId)
               const dueDateBadge = getDueDateBadge(task.dueDate)
 
+              // Evento ao iniciar o arrastamento do cartão
+              const handleDragStart = (e) => {
+                e.dataTransfer.setData('text/plain', task.id)
+              }
+
               return (
                 <motion.div
                   key={task.id}
+                  draggable={true}
+                  onDragStart={handleDragStart}
                   layout
                   initial={{ opacity: 0, y: 15, scale: 0.97 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.15 } }}
                   whileHover={{ y: -3, transition: { duration: 0.2 } }}
                   transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-                  className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 rounded-xl p-4 shadow-md hover:shadow-indigo-500/10 transition-colors group"
+                  className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 rounded-xl p-4 shadow-md hover:shadow-indigo-500/10 transition-colors group cursor-grab active:cursor-grabbing"
                 >
                   {/* Cabeçalho do Cartão */}
                   <div className="flex items-start justify-between gap-2 mb-2">
@@ -173,7 +197,7 @@ export default function KanbanColumn({
 
                   {/* Rodapé de Ações */}
                   <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 gap-2">
-                    {/* Botões Mover */}
+                    {/* Botões Mover (Mantidos para compatibilidade com telemóveis onde arrastar é mais difícil) */}
                     <div className="flex items-center gap-1">
                       {currentIndex > 0 && (
                         <motion.button
