@@ -5,39 +5,10 @@ import KanbanColumn from './components/KanbanColumn'
 import TaskModal from './components/TaskModal'
 import Dashboard from './components/Dashboard'
 
-const initialTasks = [
-  {
-    id: '1',
-    title: 'Implementar filtros de busca',
-    description: 'Adicionar barra de pesquisa em tempo real.',
-    status: 'todo',
-    priority: 'Baixa',
-    tag: 'Backend',
-    dueDate: '2026-10-20',
-    linkedTaskId: '',
-    checklist: [
-      { id: 'c1', text: 'Filtrar por texto', completed: false },
-    ],
-  },
-  {
-    id: '2',
-    title: 'Desenvolver layout do Kanban',
-    description: 'Criar colunas estilizadas com Tailwind CSS.',
-    status: 'in_progress',
-    priority: 'Média',
-    tag: 'Design',
-    dueDate: '2026-10-15',
-    linkedTaskId: '',
-    checklist: [
-      { id: 'c3', text: 'Desenhar esquema de cores', completed: true },
-    ],
-  },
-]
-
 export default function App() {
   const [tasks, setTasks] = useState(() => {
     const saved = localStorage.getItem('taskflow_tasks')
-    return saved ? JSON.parse(saved) : initialTasks
+    return saved ? JSON.parse(saved) : []
   })
 
   const [search, setSearch] = useState('')
@@ -54,6 +25,7 @@ export default function App() {
     document.documentElement.style.fontSize = fontSize
   }, [fontSize])
 
+  // Guarda sempre as alterações no localStorage
   useEffect(() => {
     localStorage.setItem('taskflow_tasks', JSON.stringify(tasks))
   }, [tasks])
@@ -78,7 +50,7 @@ export default function App() {
     if (sortBy === 'dueDate') {
       if (!a.dueDate) return 1
       if (!b.dueDate) return -1
-      return new Date(a.dueDate) - new Date(b.dueDate)
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
     }
     return 0
   })
