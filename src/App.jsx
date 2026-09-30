@@ -43,6 +43,7 @@ export default function App() {
   const [search, setSearch] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('')
   const [tagFilter, setTagFilter] = useState('')
+  const [sortBy, setSortBy] = useState('default')
   const [fontSize, setFontSize] = useState('16px')
 
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -57,6 +58,7 @@ export default function App() {
     localStorage.setItem('taskflow_tasks', JSON.stringify(tasks))
   }, [tasks])
 
+  // Filtragem
   const filteredTasks = tasks.filter((task) => {
     const matchesSearch =
       task.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -65,6 +67,20 @@ export default function App() {
     const matchesTag = tagFilter ? task.tag === tagFilter : true
 
     return matchesSearch && matchesPriority && matchesTag
+  })
+
+  // Ordenação Inteligente
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
+    if (sortBy === 'priority') {
+      const weights = { 'Alta': 3, 'Média': 2, 'Baixa': 1 }
+      return (weights[b.priority] || 0) - (weights[a.priority] || 0)
+    }
+    if (sortBy === 'dueDate') {
+      if (!a.dueDate) return 1
+      if (!b.dueDate) return -1
+      return new Date(a.dueDate) - new Date(b.dueDate)
+    }
+    return 0
   })
 
   const handleOpenModal = (task = null) => {
@@ -124,8 +140,8 @@ export default function App() {
         {/* Dashboard de Indicadores */}
         <Dashboard tasks={tasks} />
 
-        {/* Barra de Filtros */}
-        <div className="flex flex-col md:flex-row items-center gap-3 bg-slate-900/80 p-3.5 sm:p-4 rounded-2xl border border-slate-800/80 shadow-lg">
+        {/* Barra de Filtros e Ordenação */}
+        <div className="flex flex-col lg:flex-row items-center gap-3 bg-slate-900/80 p-3.5 sm:p-4 rounded-2xl border border-slate-800/80 shadow-lg">
           <div className="relative flex-1 w-full">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm">
               🔍
@@ -139,7 +155,7 @@ export default function App() {
             />
           </div>
 
-          <div className="grid grid-cols-2 sm:flex items-center gap-3 w-full md:w-auto">
+          <div className="grid grid-cols-2 sm:flex items-center gap-3 w-full lg:w-auto">
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
@@ -161,6 +177,16 @@ export default function App() {
               <option value="Backend">Backend</option>
               <option value="Design">Design</option>
             </select>
+
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="col-span-2 sm:col-span-1 w-full sm:w-auto px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-indigo-300 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
+            >
+              <option value="default">↕️ Ordenar: Padrão</option>
+              <option value="priority">⚡ Prioridade (Alta → Baixa)</option>
+              <option value="dueDate">📅 Data Limite (Mais Urgente)</option>
+            </select>
           </div>
         </div>
 
@@ -171,7 +197,7 @@ export default function App() {
             status="todo"
             color="border-amber-500"
             dotColor="bg-amber-500"
-            tasks={filteredTasks.filter((t) => t.status === 'todo')}
+            tasks={sortedTasks.filter((t) => t.status === 'todo')}
             allTasks={tasks}
             onEdit={handleOpenModal}
             onDelete={handleDeleteTask}
@@ -184,7 +210,7 @@ export default function App() {
             status="blocked"
             color="border-rose-500"
             dotColor="bg-rose-500"
-            tasks={filteredTasks.filter((t) => t.status === 'blocked')}
+            tasks={sortedTasks.filter((t) => t.status === 'blocked')}
             allTasks={tasks}
             onEdit={handleOpenModal}
             onDelete={handleDeleteTask}
@@ -197,7 +223,7 @@ export default function App() {
             status="in_progress"
             color="border-indigo-500"
             dotColor="bg-indigo-500"
-            tasks={filteredTasks.filter((t) => t.status === 'in_progress')}
+            tasks={sortedTasks.filter((t) => t.status === 'in_progress')}
             allTasks={tasks}
             onEdit={handleOpenModal}
             onDelete={handleDeleteTask}
@@ -210,7 +236,7 @@ export default function App() {
             status="ready_to_test"
             color="border-blue-500"
             dotColor="bg-blue-500"
-            tasks={filteredTasks.filter((t) => t.status === 'ready_to_test')}
+            tasks={sortedTasks.filter((t) => t.status === 'ready_to_test')}
             allTasks={tasks}
             onEdit={handleOpenModal}
             onDelete={handleDeleteTask}
@@ -223,7 +249,7 @@ export default function App() {
             status="testing"
             color="border-purple-500"
             dotColor="bg-purple-500"
-            tasks={filteredTasks.filter((t) => t.status === 'testing')}
+            tasks={sortedTasks.filter((t) => t.status === 'testing')}
             allTasks={tasks}
             onEdit={handleOpenModal}
             onDelete={handleDeleteTask}
@@ -236,7 +262,7 @@ export default function App() {
             status="done"
             color="border-emerald-500"
             dotColor="bg-emerald-500"
-            tasks={filteredTasks.filter((t) => t.status === 'done')}
+            tasks={sortedTasks.filter((t) => t.status === 'done')}
             allTasks={tasks}
             onEdit={handleOpenModal}
             onDelete={handleDeleteTask}

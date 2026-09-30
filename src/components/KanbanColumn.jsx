@@ -2,6 +2,40 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 const STATUS_FLOW = ['todo', 'blocked', 'in_progress', 'ready_to_test', 'testing', 'done']
 
+// Função para calcular o status da data limite com alertas coloridos
+const getDueDateBadge = (dueDateStr) => {
+  if (!dueDateStr) return null
+
+  const today = new Date().toISOString().split('T')[0]
+  const due = new Date(dueDateStr + 'T00:00:00')
+  const now = new Date(today + 'T00:00:00')
+  const diffTime = due - now
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
+
+  if (diffDays < 0) {
+    return {
+      label: `⚠️ Atrasado (${Math.abs(diffDays)}d)`,
+      style: 'bg-rose-500/10 text-rose-400 border-rose-500/30 animate-pulse',
+    }
+  }
+  if (diffDays === 0) {
+    return {
+      label: '⚡ Vence hoje',
+      style: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+    }
+  }
+  if (diffDays === 1) {
+    return {
+      label: '⏳ Vence amanhã',
+      style: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+    }
+  }
+  return {
+    label: `📅 ${dueDateStr}`,
+    style: 'bg-slate-800 text-slate-400 border-slate-700/50',
+  }
+}
+
 export default function KanbanColumn({
   title,
   status,
@@ -15,12 +49,6 @@ export default function KanbanColumn({
   onToggleChecklist,
 }) {
   const currentIndex = STATUS_FLOW.indexOf(status)
-
-  const handleMoveBack = () => {
-    if (currentIndex > 0) {
-      onMove(tasks[0]?.id || '', STATUS_FLOW[currentIndex - 1])
-    }
-  }
 
   return (
     <div className="flex-1 w-full min-w-[280px] bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 sm:p-5 flex flex-col min-h-[500px]">
@@ -52,6 +80,7 @@ export default function KanbanColumn({
               const completedCount = task.checklist ? task.checklist.filter((c) => c.completed).length : 0
               const totalCount = task.checklist ? task.checklist.length : 0
               const linkedTask = allTasks?.find((t) => t.id === task.linkedTaskId)
+              const dueDateBadge = getDueDateBadge(task.dueDate)
 
               return (
                 <motion.div
@@ -89,16 +118,16 @@ export default function KanbanColumn({
                     </p>
                   )}
 
-                  {/* Tag, Data e Vínculo */}
+                  {/* Tag, Data com Alerta e Vínculo */}
                   <div className="flex flex-wrap items-center gap-2 mb-3">
                     {task.tag && (
                       <span className="text-[11px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700/50 flex items-center gap-1">
                         🏷️ {task.tag}
                       </span>
                     )}
-                    {task.dueDate && (
-                      <span className="text-[11px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md border border-slate-700/50 flex items-center gap-1">
-                        📅 {task.dueDate}
+                    {dueDateBadge && (
+                      <span className={`text-[11px] px-2 py-0.5 rounded-md border font-medium flex items-center gap-1 ${dueDateBadge.style}`}>
+                        {dueDateBadge.label}
                       </span>
                     )}
                     {linkedTask && (
