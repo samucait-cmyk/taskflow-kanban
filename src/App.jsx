@@ -15,6 +15,15 @@ const COLUMNS = [
   { id: 'done', title: 'Concluído' },
 ]
 
+const DEFAULT_WIP_LIMITS = {
+  todo: 5,
+  blocked: 3,
+  in_progress: 4,
+  ready_to_test: 4,
+  testing: 3,
+  done: 10,
+}
+
 export default function App() {
   const [tasks, setTasks] = useState(() => {
     const saved = localStorage.getItem('taskflow_tasks')
@@ -62,14 +71,25 @@ export default function App() {
     ]
   })
 
-  // Estados de Filtro, Tamanho de Texto Numérico (Píxeis), Ordenação e Vista
+  // Limites WIP por coluna personalizáveis
+  const [wipLimits, setWipLimits] = useState(() => {
+    const saved = localStorage.getItem('taskflow_wip_limits')
+    if (saved) {
+      try {
+        return JSON.parse(saved)
+      } catch (e) {
+        console.error(e)
+      }
+    }
+    return DEFAULT_WIP_LIMITS
+  })
+
+  // Estados de Filtro, Fonte, Ordenação e Vista
   const [search, setSearch] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('')
   const [tagFilter, setTagFilter] = useState('')
   const [sortBy, setSortBy] = useState('default')
   const [viewMode, setViewMode] = useState('kanban')
-  
-  // Base do tamanho da fonte em px (padrão: 16px, min: 12px, max: 22px)
   const [fontSize, setFontSize] = useState(16)
 
   // Modais e Toasts
@@ -86,16 +106,9 @@ export default function App() {
     }, 3500)
   }
 
-  // Funções de Aumento e Diminuição de Fonte
-  const handleIncreaseFont = () => {
-    setFontSize((prev) => Math.min(prev + 2, 22))
-  }
+  const handleIncreaseFont = () => setFontSize((prev) => Math.min(prev + 2, 22))
+  const handleDecreaseFont = () => setFontSize((prev) => Math.max(prev - 2, 12))
 
-  const handleDecreaseFont = () => {
-    setFontSize((prev) => Math.max(prev - 2, 12))
-  }
-
-  // Efeito responsável por alterar dinamicamente a raiz do documento (funciona em mobile)
   useEffect(() => {
     document.documentElement.style.fontSize = `${fontSize}px`
     document.body.style.fontSize = `${fontSize}px`
@@ -104,6 +117,23 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('taskflow_tasks', JSON.stringify(tasks))
   }, [tasks])
+
+  useEffect(() => {
+    localStorage.setItem('taskflow_wip_limits', JSON.stringify(wipLimits))
+  }, [wipLimits])
+
+  const handleUpdateWipLimit = (columnId, newLimit) => {
+    setWipLimits((prev) => ({ ...prev, [columnId]: newLimit }))
+    showToast(`Limite WIP da coluna atualizado para ${newLimit}!`)
+  }
+
+  const handleClearFilters = () => {
+    setSearch('')
+    setPriorityFilter('')
+    setTagFilter('')
+    setSortBy('default')
+    showToast('Filtros redefinidos!', 'info')
+  }
 
   // Lógica de Filtragem
   const filteredTasks = tasks.filter((task) => {
@@ -172,7 +202,7 @@ export default function App() {
     )
   }
 
-  // Backup: Exportar JSON
+  // Exportar Backup JSON
   const handleExportBackup = () => {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(tasks, null, 2))
     const downloadAnchor = document.createElement('a')
@@ -181,10 +211,39 @@ export default function App() {
     document.body.appendChild(downloadAnchor)
     downloadAnchor.click()
     downloadAnchor.remove()
-    showToast('Backup exportado com sucesso!')
+    showToast('Backup JSON exportado com sucesso!')
   }
 
-  // Backup: Importar JSON
+  // Exportar Planilha CSV
+  const handleExportCSV = () => {
+    if (tasks.length === 0) {
+      showToast('Sem tarefas para exportar em CSV.', 'error')
+      return
+    }
+
+    const headers = ['ID', 'Título', 'Descrição', 'Status', 'Prioridade', 'Tag', 'Data Limite']
+    const rows = tasks.map((t) => [
+      t.id,
+      `"${(t.title || '').replace(/"/g, '""')}"`,
+      `"${(t.description || '').replace(/"/g, '""')}"`,
+      t.status,
+      t.priority || '',
+      t.tag || '',
+      t.dueDate || '',
+    ])
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n')
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement('a')
+    link.setAttribute('href', encodedUri)
+    link.setAttribute('download', `taskflow_export_${new Date().toISOString().split('T')[0]}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    showToast('Planilha CSV gerada com sucesso!')
+  }
+
+  // Importar Backup JSON
   const handleImportBackup = (e) => {
     const fileReader = new FileReader()
     if (e.target.files && e.target.files[0]) {
@@ -205,9 +264,11 @@ export default function App() {
     }
   }
 
+  const hasActiveFilters = search || priorityFilter || tagFilter || sortBy !== 'default'
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white transition-all">
-      {/* Cabeçalho com Temporizador Centralizado e Controlo de Fonte A- / A+ */}
+      {/* Cabeçalho */}
       <Header
         onIncreaseFont={handleIncreaseFont}
         onDecreaseFont={handleDecreaseFont}
@@ -232,7 +293,7 @@ export default function App() {
         {/* Dashboard de Indicadores */}
         <Dashboard tasks={tasks} />
 
-        {/* Barra de Filtros, Ordenação, Backups e Alternador de Vista */}
+        {/* Barra de Filtros, Ordenação, Backups e Ferramentas */}
         <div className="flex flex-col lg:flex-row items-center gap-3 bg-slate-900/80 p-3.5 sm:p-4 rounded-2xl border border-slate-800/80 shadow-lg">
           {/* Campo de Pesquisa */}
           <div className="relative flex-1 w-full">
@@ -287,14 +348,32 @@ export default function App() {
               <option value="dueDate">📅 Data Limite (Mais Urgente)</option>
             </select>
 
-            {/* Botões de Backup */}
+            {/* Limpar Filtros */}
+            {hasActiveFilters && (
+              <button
+                onClick={handleClearFilters}
+                className="px-3 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+              >
+                ✕ Limpar
+              </button>
+            )}
+
+            {/* Botões de Exportação/Importação */}
             <div className="col-span-2 sm:col-span-auto flex items-center gap-1.5 w-full sm:w-auto">
               <button
                 onClick={handleExportBackup}
-                title="Descarregar backup em JSON"
+                title="Descarregar backup completo em JSON"
                 className="flex-1 sm:flex-none px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs sm:text-sm font-medium transition-colors cursor-pointer flex items-center justify-center gap-1"
               >
-                💾 Exportar
+                💾 JSON
+              </button>
+
+              <button
+                onClick={handleExportCSV}
+                title="Exportar dados para formato CSV (Excel)"
+                className="flex-1 sm:flex-none px-3 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl text-xs sm:text-sm font-medium transition-colors cursor-pointer flex items-center justify-center gap-1"
+              >
+                📊 CSV
               </button>
 
               <input
@@ -345,7 +424,7 @@ export default function App() {
           Mostrando <span className="text-slate-200 font-bold">{sortedTasks.length}</span> de {tasks.length} tarefas
         </div>
 
-        {/* Visualização de Quadros Kanban ou Tabela */}
+        {/* Visualização Kanban ou Tabela */}
         <AnimatePresence mode="wait">
           {viewMode === 'kanban' ? (
             <motion.div
@@ -361,6 +440,7 @@ export default function App() {
                   <KanbanColumn
                     key={col.id}
                     column={col}
+                    maxLimit={wipLimits[col.id]}
                     tasks={columnTasks}
                     allTasks={tasks}
                     onEdit={handleEditTask}
@@ -368,6 +448,11 @@ export default function App() {
                     onMove={handleStatusChange}
                     onStatusChange={handleStatusChange}
                     onToggleChecklist={handleToggleChecklist}
+                    onUpdateWipLimit={handleUpdateWipLimit}
+                    onQuickAdd={(colId) => {
+                      setEditingTask({ status: colId })
+                      setIsModalOpen(true)
+                    }}
                   />
                 )
               })}

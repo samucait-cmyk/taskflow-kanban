@@ -22,8 +22,18 @@ export default function TaskCard({
 
   const checklist = task.checklist || []
   const completedCount = checklist.filter((item) => item.completed).length
+  const checklistPercentage = checklist.length > 0 ? Math.round((completedCount / checklist.length) * 100) : 0
 
-  // Identificação do estágio atual para navegação pelas setas
+  // Verificação de tarefa atrasada
+  const isOverdue = (() => {
+    if (!task.dueDate || task.status === 'done') return false
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const due = new Date(task.dueDate + 'T00:00:00')
+    return due < today
+  })()
+
+  // Navegação do cartão pelas setas
   const currentIndex = WORKFLOW_STAGES.indexOf(task.status)
 
   const moveTask = (targetStatus) => {
@@ -50,18 +60,27 @@ export default function TaskCard({
     <div
       draggable
       onDragStart={handleDragStart}
-      className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-md hover:border-slate-700 transition-all cursor-grab active:cursor-grabbing flex flex-col gap-3 group"
+      className={`bg-slate-900/90 border rounded-2xl p-4 shadow-md hover:border-slate-700 transition-all cursor-grab active:cursor-grabbing flex flex-col gap-3 group relative ${
+        isOverdue ? 'border-rose-500/80 bg-rose-950/10 ring-1 ring-rose-500/30' : 'border-slate-800'
+      }`}
     >
       {/* Cabeçalho do Cartão */}
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-semibold text-slate-100 text-xs sm:text-sm leading-snug">
           {task.title}
         </h3>
-        {task.priority && (
-          <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${priorityColors[task.priority] || priorityColors.Média}`}>
-            {task.priority}
-          </span>
-        )}
+        <div className="flex items-center gap-1 shrink-0">
+          {isOverdue && (
+            <span className="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full font-bold animate-pulse">
+              ⚠️️ Atrasado
+            </span>
+          )}
+          {task.priority && (
+            <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${priorityColors[task.priority] || priorityColors.Média}`}>
+              {task.priority}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Descrição */}
@@ -79,20 +98,32 @@ export default function TaskCard({
           </span>
         )}
         {task.dueDate && (
-          <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-lg flex items-center gap-1 border border-slate-700/50">
+          <span className={`text-[10px] px-2 py-0.5 rounded-lg flex items-center gap-1 border ${
+            isOverdue
+              ? 'bg-rose-950/60 text-rose-300 border-rose-800/60 font-semibold'
+              : 'bg-slate-800 text-slate-300 border-slate-700/50'
+          }`}>
             📅 {task.dueDate}
           </span>
         )}
       </div>
 
-      {/* Checklist / Subtarefas com Contador */}
+      {/* Checklist / Subtarefas com Contador e Barra de Progresso Visual */}
       {checklist.length > 0 && (
-        <div className="flex flex-col gap-1 pt-2 border-t border-slate-800/80">
+        <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-800/80">
           <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
-            <span>Checklist</span>
-            <span>{completedCount}/{checklist.length}</span>
+            <span>Subtarefas</span>
+            <span className="font-mono">{completedCount}/{checklist.length} ({checklistPercentage}%)</span>
           </div>
-          <div className="flex flex-col gap-1">
+
+          <div className="w-full h-1 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+            <div
+              className="h-full bg-indigo-500 transition-all duration-300"
+              style={{ width: `${checklistPercentage}%` }}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1 mt-1">
             {checklist.map((item, idx) => (
               <label
                 key={idx}
@@ -115,7 +146,7 @@ export default function TaskCard({
 
       {/* Rodapé com Navegação de Duas Setas (◀ e ▶) e Ações */}
       <div className="flex items-center justify-between pt-2.5 border-t border-slate-800/80 mt-1">
-        {/* Duas Setas para Navegar entre Colunas */}
+        {/* Setas para Navegação entre Colunas */}
         <div className="flex items-center gap-1">
           <button
             type="button"

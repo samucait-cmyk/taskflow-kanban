@@ -2,14 +2,12 @@ import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import TaskCard from './TaskCard'
 
-// Configurações e cores por padrão corporativo para cada coluna do Kanban
 const COLUMN_CONFIG = {
   todo: {
     label: 'A Fazer',
     badge: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
     dot: 'bg-amber-500',
     border: 'border-amber-500/30',
-    accentBg: 'bg-amber-500/5',
     defaultLimit: 5,
   },
   blocked: {
@@ -17,7 +15,6 @@ const COLUMN_CONFIG = {
     badge: 'bg-rose-500/10 text-rose-400 border-rose-500/30',
     dot: 'bg-rose-500',
     border: 'border-rose-500/30',
-    accentBg: 'bg-rose-500/5',
     defaultLimit: 3,
   },
   in_progress: {
@@ -25,7 +22,6 @@ const COLUMN_CONFIG = {
     badge: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30',
     dot: 'bg-indigo-500',
     border: 'border-indigo-500/30',
-    accentBg: 'bg-indigo-500/5',
     defaultLimit: 4,
   },
   ready_to_test: {
@@ -33,7 +29,6 @@ const COLUMN_CONFIG = {
     badge: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
     dot: 'bg-blue-500',
     border: 'border-blue-500/30',
-    accentBg: 'bg-blue-500/5',
     defaultLimit: 4,
   },
   testing: {
@@ -41,7 +36,6 @@ const COLUMN_CONFIG = {
     badge: 'bg-purple-500/10 text-purple-400 border-purple-500/30',
     dot: 'bg-purple-500',
     border: 'border-purple-500/30',
-    accentBg: 'bg-purple-500/5',
     defaultLimit: 3,
   },
   done: {
@@ -49,7 +43,6 @@ const COLUMN_CONFIG = {
     badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
     dot: 'bg-emerald-500',
     border: 'border-emerald-500/30',
-    accentBg: 'bg-emerald-500/5',
     defaultLimit: 10,
   },
 }
@@ -69,10 +62,10 @@ export default function KanbanColumn({
   onStatusChange,
   onToggleChecklist,
   onQuickAdd,
+  onUpdateWipLimit,
 }) {
   const [isDragOver, setIsDragOver] = useState(false)
 
-  // Identificação do status atual e carregamento de configurações visuais
   const currentStatus = status || (column && column.id) || 'todo'
   const config = COLUMN_CONFIG[currentStatus] || COLUMN_CONFIG.todo
 
@@ -81,12 +74,10 @@ export default function KanbanColumn({
   const borderStyle = color || config.border
   const dotStyle = dotColor || config.dot
 
-  // Métricas de limite WIP (Work In Progress)
   const taskCount = tasks.length
   const isWipExceeded = taskCount > limit
   const wipPercentage = Math.min(Math.round((taskCount / limit) * 100), 100)
 
-  // Gestão de Drag & Drop
   const handleDragOver = (e) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
@@ -112,6 +103,16 @@ export default function KanbanColumn({
     }
   }
 
+  const handleEditWipPrompt = () => {
+    const newLimitStr = prompt(`Digite o novo Limite WIP para a coluna "${displayTitle}":`, limit)
+    if (newLimitStr !== null) {
+      const parsed = parseInt(newLimitStr, 10)
+      if (!isNaN(parsed) && parsed > 0 && onUpdateWipLimit) {
+        onUpdateWipLimit(currentStatus, parsed)
+      }
+    }
+  }
+
   return (
     <div
       onDragOver={handleDragOver}
@@ -125,14 +126,14 @@ export default function KanbanColumn({
           : `${borderStyle} shadow-md`
       }`}
     >
-      {/* Banner de alerta superior de estouro de Limite WIP */}
+      {/* Alerta de estouro de Limite WIP */}
       {isWipExceeded && (
         <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-rose-600 to-red-600 text-white text-[10px] font-bold uppercase tracking-wider py-0.5 text-center shadow-sm animate-pulse">
           ⚠️ Limite WIP Excedido ({taskCount}/{limit})
         </div>
       )}
 
-      {/* Cabeçalho da Coluna com Ícone de Cor, Título e Contadores */}
+      {/* Cabeçalho da Coluna */}
       <div className={`flex flex-col gap-2 pt-1 ${isWipExceeded ? 'mt-3' : ''}`}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -143,15 +144,17 @@ export default function KanbanColumn({
           </div>
 
           <div className="flex items-center gap-1.5">
-            <span
-              className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold border ${
+            <button
+              onClick={handleEditWipPrompt}
+              title="Clique para editar o limite WIP desta coluna"
+              className={`px-2 py-0.5 rounded-full text-xs font-mono font-bold border transition-all cursor-pointer hover:scale-105 ${
                 isWipExceeded
                   ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse'
-                  : 'bg-slate-950 text-slate-300 border-slate-800'
+                  : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-indigo-500'
               }`}
             >
-              {taskCount}/{limit}
-            </span>
+              {taskCount}/{limit} ✏️
+            </button>
 
             {onQuickAdd && (
               <button
@@ -165,7 +168,7 @@ export default function KanbanColumn({
           </div>
         </div>
 
-        {/* Indicador Numérico de WIP e Barra de Progresso de Carga */}
+        {/* Indicador Numérico de WIP e Barra de Progresso */}
         <div className="flex flex-col gap-1 border-t border-slate-800/80 pt-2">
           <div className="flex items-center justify-between text-[10px] font-medium text-slate-400">
             <span className={isWipExceeded ? 'text-rose-400 font-bold' : ''}>
@@ -191,7 +194,7 @@ export default function KanbanColumn({
 
       <div className="h-0.5 w-full bg-slate-800/60 rounded-full" />
 
-      {/* Contentor de Cartões com Animações de Entrada/Saída */}
+      {/* Lista de Cartões da Coluna */}
       <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-0.5">
         <AnimatePresence mode="popLayout">
           {tasks.length > 0 ? (
@@ -242,7 +245,7 @@ export default function KanbanColumn({
         </AnimatePresence>
       </div>
 
-      {/* Rodapé Informativo da Coluna */}
+      {/* Rodapé Informativo */}
       <div className="pt-2 border-t border-slate-800/60 text-[10px] text-slate-500 flex items-center justify-between">
         <span>Estado: {config.label}</span>
         {isWipExceeded && <span className="text-rose-400 font-bold">⚠️ Atenção ao Fluxo</span>}
