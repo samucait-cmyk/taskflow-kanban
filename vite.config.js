@@ -3,7 +3,6 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  base: './', // <--- Adicione esta linha para garantir que os caminhos dos estilos e scripts funcionam perfeitamente!
   plugins: [
     react(),
     VitePWA({
