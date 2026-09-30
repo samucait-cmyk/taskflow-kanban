@@ -60,6 +60,11 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
 
+  // Atualiza o tamanho de fonte global do documento (raiz html)
+  useEffect(() => {
+    document.documentElement.style.fontSize = fontSize
+  }, [fontSize])
+
   useEffect(() => {
     localStorage.setItem('taskflow_tasks', JSON.stringify(tasks))
   }, [tasks])
@@ -120,10 +125,7 @@ export default function App() {
   }
 
   return (
-    <div
-      style={{ fontSize }}
-      className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white"
-    >
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white">
       <Header
         onNewTask={() => handleOpenModal()}
         fontSize={fontSize}
