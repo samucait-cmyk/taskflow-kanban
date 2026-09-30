@@ -1,405 +1,206 @@
-import { useState, useEffect, useRef } from 'react'
-import { AnimatePresence } from 'framer-motion'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import Header from './components/Header'
+import PomodoroTimer from './components/PomodoroTimer'
 import KanbanColumn from './components/KanbanColumn'
 import TableView from './components/TableView'
 import TaskModal from './components/TaskModal'
 import Dashboard from './components/Dashboard'
 
+const COLUMNS = [
+  { id: 'todo', title: 'A Fazer', color: 'border-amber-500/30 bg-amber-500/5' },
+  { id: 'blocked', title: 'Bloqueado', color: 'border-rose-500/30 bg-rose-500/5' },
+  { id: 'in_progress', title: 'Em Andamento', color: 'border-indigo-500/30 bg-indigo-500/5' },
+  { id: 'ready_to_test', title: 'Pronto p/ Teste', color: 'border-blue-500/30 bg-blue-500/5' },
+  { id: 'testing', title: 'Em Teste', color: 'border-purple-500/30 bg-purple-500/5' },
+  { id: 'done', title: 'Concluído', color: 'border-emerald-500/30 bg-emerald-500/5' },
+]
+
 export default function App() {
   const [tasks, setTasks] = useState(() => {
     const saved = localStorage.getItem('taskflow_tasks')
-    return saved ? JSON.parse(saved) : []
+    if (saved) {
+      try {
+        return JSON.parse(saved)
+      } catch (e) {
+        console.error(e)
+      }
+    }
+    return [
+      {
+        id: '1',
+        title: 'Criar wireframe da interface',
+        description: 'Desenhar rascunhos iniciais do painel principal.',
+        status: 'todo',
+        priority: 'Alta',
+        tag: 'Design',
+        dueDate: '2026-10-10',
+      },
+      {
+        id: '2',
+        title: 'Configurar rotas do React',
+        description: 'Implementar navegação entre páginas.',
+        status: 'in_progress',
+        priority: 'Média',
+        tag: 'Desenvolvimento',
+        dueDate: '2026-10-12',
+      },
+    ]
   })
 
-  const [search, setSearch] = useState('')
-  const [priorityFilter, setPriorityFilter] = useState('')
-  const [tagFilter, setTagFilter] = useState('')
-  const [sortBy, setSortBy] = useState('default')
-  const [fontSize, setFontSize] = useState('16px')
   const [viewMode, setViewMode] = useState('kanban') // 'kanban' | 'table'
-
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedTag, setSelectedTag] = useState('All')
+  const [selectedPriority, setSelectedPriority] = useState('All')
+  
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
-
-  // Estado para o sistema de Toast Notifications
-  const [toast, setToast] = useState(null)
-
-  const fileInputRef = useRef(null)
-
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type })
-    setTimeout(() => {
-      setToast(null)
-    }, 3500)
-  }
-
-  useEffect(() => {
-    document.documentElement.style.fontSize = fontSize
-  }, [fontSize])
 
   useEffect(() => {
     localStorage.setItem('taskflow_tasks', JSON.stringify(tasks))
   }, [tasks])
 
-  const filteredTasks = tasks.filter((task) => {
-    const matchesSearch =
-      task.title.toLowerCase().includes(search.toLowerCase()) ||
-      task.description.toLowerCase().includes(search.toLowerCase())
-    const matchesPriority = priorityFilter ? task.priority === priorityFilter : true
-    const matchesTag = tagFilter ? task.tag === tagFilter : true
-
-    return matchesSearch && matchesPriority && matchesTag
-  })
-
-  const sortedTasks = [...filteredTasks].sort((a, b) => {
-    if (sortBy === 'priority') {
-      const weights = { 'Alta': 3, 'Média': 2, 'Baixa': 1 }
-      return (weights[b.priority] || 0) - (weights[a.priority] || 0)
+  const handleCreateOrUpdateTask = (taskData) => {
+    if (editingTask) {
+      setTasks(tasks.map(t => t.id === editingTask.id ? { ...t, ...taskData } : t))
+    } else {
+      const newTask = {
+        id: Date.now().toString(),
+        ...taskData,
+      }
+      setTasks([newTask, ...tasks])
     }
-    if (sortBy === 'dueDate') {
-      if (!a.dueDate) return 1
-      if (!b.dueDate) return -1
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-    }
-    return 0
-  })
+    setEditingTask(null)
+    setIsModalOpen(false)
+  }
 
-  const handleOpenModal = (task = null) => {
+  const handleDeleteTask = (taskId) => {
+    setTasks(tasks.filter(t => t.id !== taskId))
+  }
+
+  const handleEditTask = (task) => {
     setEditingTask(task)
     setIsModalOpen(true)
   }
 
-  const handleSaveTask = (taskData) => {
-    if (editingTask) {
-      setTasks(
-        tasks.map((t) => (t.id === editingTask.id ? { ...t, ...taskData } : t))
-      )
-      showToast('Tarefa atualizada com sucesso!')
-    } else {
-      const newTask = {
-        ...taskData,
-        id: Date.now().toString(),
-      }
-      setTasks([...tasks, newTask])
-      showToast('Nova tarefa criada com sucesso!')
-    }
-    setIsModalOpen(false)
-    setEditingTask(null)
+  const handleStatusChange = (taskId, newStatus) => {
+    setTasks(tasks.map(t => t.id === taskId ? { ...t, status: newStatus } : t))
   }
 
-  const handleDeleteTask = (id) => {
-    setTasks(tasks.filter((t) => t.id !== id))
-    showToast('Tarefa eliminada com sucesso!', 'info')
-  }
-
-  const handleMoveTask = (id, newStatus) => {
-    setTasks(
-      tasks.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
-    )
-    showToast('Estado da tarefa atualizado!', 'success')
-  }
-
-  const handleToggleChecklist = (taskId, itemIndex) => {
-    setTasks(
-      tasks.map((task) => {
-        if (task.id !== taskId) return task
-        const updatedChecklist = [...task.checklist]
-        updatedChecklist[itemIndex] = {
-          ...updatedChecklist[itemIndex],
-          completed: !updatedChecklist[itemIndex].completed,
-        }
-        return { ...task, checklist: updatedChecklist }
-      })
-    )
-  }
-
-  const handleExportBackup = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tasks, null, 2))
-    const downloadAnchor = document.createElement('a')
-    downloadAnchor.setAttribute("href", dataStr)
-    downloadAnchor.setAttribute("download", `taskflow_backup_${new Date().toISOString().split('T')[0]}.json`)
-    document.body.appendChild(downloadAnchor)
-    downloadAnchor.click()
-    downloadAnchor.remove()
-    showToast('Backup exportado com sucesso!')
-  }
-
-  const handleImportBackup = (e) => {
-    const fileReader = new FileReader()
-    if (e.target.files && e.target.files[0]) {
-      fileReader.readAsText(e.target.files[0], "UTF-8")
-      fileReader.onload = (event) => {
-        try {
-          const importedTasks = JSON.parse(event.target.result)
-          if (Array.isArray(importedTasks)) {
-            setTasks(importedTasks)
-            showToast('Backup importado com sucesso!')
-          } else {
-            showToast('Formato de ficheiro inválido.', 'error')
-          }
-        } catch (error) {
-          showToast('Erro ao ler o ficheiro JSON.', 'error')
-        }
-      }
-    }
-  }
+  // Filtragem de tarefas
+  const filteredTasks = tasks.filter(task => {
+    const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    const matchesTag = selectedTag === 'All' || task.tag === selectedTag
+    const matchesPriority = selectedPriority === 'All' || task.priority === selectedPriority
+    return matchesSearch && matchesTag && matchesPriority
+  })
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white relative">
-      <Header
-        onNewTask={() => handleOpenModal()}
-        fontSize={fontSize}
-        setFontSize={setFontSize}
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white">
+      <Header 
+        onNewTask={() => { setEditingTask(null); setIsModalOpen(true); }}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        selectedTag={selectedTag}
+        setSelectedTag={setSelectedTag}
+        selectedPriority={selectedPriority}
+        setSelectedPriority={setSelectedPriority}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
       />
 
-      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
-        {/* Dashboard de Indicadores */}
-        <Dashboard tasks={tasks} />
-
-        {/* Barra de Filtros, Visualização, Ordenação e Gestão de Backups */}
-        <div className="flex flex-col lg:flex-row items-center gap-3 bg-slate-900/80 p-3.5 sm:p-4 rounded-2xl border border-slate-800/80 shadow-lg">
-          <div className="relative flex-1 w-full">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm">
-              🔍
-            </span>
-            <input
-              type="text"
-              placeholder="Pesquisar tarefas..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm transition-all"
-            />
+      <main className="flex-1 p-4 sm:p-6 max-w-[1600px] w-full mx-auto flex flex-col gap-6">
+        {/* Barra superior com Pomodoro e Estatísticas */}
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 bg-slate-900/60 border border-slate-800/80 p-4 rounded-2xl shadow-lg backdrop-blur-md">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-100 flex items-center gap-2">
+              <span>🚀</span> Taskflow Dashboard
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-400">
+              Gerencie suas tarefas com eficiência, foco e produtividade máxima.
+            </p>
           </div>
-
-          <div className="grid grid-cols-2 sm:flex items-center gap-3 w-full lg:w-auto flex-wrap">
-            {/* Alternador de Modo de Visualização (Kanban vs Tabela) */}
-            <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1">
-              <button
-                onClick={() => setViewMode('kanban')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  viewMode === 'kanban'
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                📊 Kanban
-              </button>
-              <button
-                onClick={() => setViewMode('table')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                  viewMode === 'table'
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                📋 Tabela
-              </button>
-            </div>
-
-            <select
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-              className="w-full sm:w-auto px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
-            >
-              <option value="">Todas Prioridades</option>
-              <option value="Baixa">Baixa</option>
-              <option value="Média">Média</option>
-              <option value="Alta">Alta</option>
-            </select>
-
-            <select
-              value={tagFilter}
-              onChange={(e) => setTagFilter(e.target.value)}
-              className="w-full sm:w-auto px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
-            >
-              <option value="">Todas Tags</option>
-              <option value="Frontend">Frontend</option>
-              <option value="Backend">Backend</option>
-              <option value="Design">Design</option>
-            </select>
-
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="col-span-2 sm:col-span-1 w-full sm:w-auto px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-indigo-300 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
-            >
-              <option value="default">↕️ Ordenar: Padrão</option>
-              <option value="priority">⚡ Prioridade (Alta → Baixa)</option>
-              <option value="dueDate">📅 Data Limite (Mais Urgente)</option>
-            </select>
-
-            {/* Botões de Backup corporativo */}
-            <div className="col-span-2 sm:col-span-auto flex items-center gap-2 w-full sm:w-auto">
-              <button
-                onClick={handleExportBackup}
-                title="Descarregar backup em JSON"
-                className="flex-1 sm:flex-none px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                💾 Exportar
-              </button>
-
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleImportBackup}
-                accept=".json"
-                className="hidden"
-              />
-
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                title="Carregar backup de ficheiro JSON"
-                className="flex-1 sm:flex-none px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                📂 Importar
-              </button>
-            </div>
+          
+          <div className="flex items-center gap-4 w-full lg:w-auto justify-between lg:justify-end">
+            <PomodoroTimer />
           </div>
         </div>
 
-        {/* Visualização: Quadro Kanban ou Vista em Tabela */}
+        {/* Dashboard de Estatísticas */}
+        <Dashboard tasks={tasks} />
+
+        {/* Seletor de visualização (Kanban vs Tabela) e contagem */}
+        <div className="flex items-center justify-between px-1">
+          <div className="text-xs text-slate-400 font-medium">
+            Mostrando <span className="text-slate-200 font-bold">{filteredTasks.length}</span> de {tasks.length} tarefas
+          </div>
+          <div className="flex items-center gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800">
+            <button
+              onClick={() => setViewMode('kanban')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === 'kanban' 
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Kanban
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === 'table' 
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Tabela (List)
+            </button>
+          </div>
+        </div>
+
+        {/* Área Principal: Kanban ou Tabela */}
         <AnimatePresence mode="wait">
           {viewMode === 'kanban' ? (
             <motion.div
               key="kanban"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5 items-start"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4 items-start pb-6"
             >
-              <KanbanColumn
-                title="A Fazer"
-                status="todo"
-                color="border-amber-500"
-                dotColor="bg-amber-500"
-                maxLimit={5}
-                tasks={sortedTasks.filter((t) => t.status === 'todo')}
-                allTasks={tasks}
-                onEdit={handleOpenModal}
-                onDelete={handleDeleteTask}
-                onMove={handleMoveTask}
-                onToggleChecklist={handleToggleChecklist}
-              />
-
-              <KanbanColumn
-                title="Bloqueado"
-                status="blocked"
-                color="border-rose-500"
-                dotColor="bg-rose-500"
-                maxLimit={3}
-                tasks={sortedTasks.filter((t) => t.status === 'blocked')}
-                allTasks={tasks}
-                onEdit={handleOpenModal}
-                onDelete={handleDeleteTask}
-                onMove={handleMoveTask}
-                onToggleChecklist={handleToggleChecklist}
-              />
-
-              <KanbanColumn
-                title="Em Andamento"
-                status="in_progress"
-                color="border-indigo-500"
-                dotColor="bg-indigo-500"
-                maxLimit={4}
-                tasks={sortedTasks.filter((t) => t.status === 'in_progress')}
-                allTasks={tasks}
-                onEdit={handleOpenModal}
-                onDelete={handleDeleteTask}
-                onMove={handleMoveTask}
-                onToggleChecklist={handleToggleChecklist}
-              />
-
-              <KanbanColumn
-                title="Pronto p/ Teste"
-                status="ready_to_test"
-                color="border-blue-500"
-                dotColor="bg-blue-500"
-                maxLimit={4}
-                tasks={sortedTasks.filter((t) => t.status === 'ready_to_test')}
-                allTasks={tasks}
-                onEdit={handleOpenModal}
-                onDelete={handleDeleteTask}
-                onMove={handleMoveTask}
-                onToggleChecklist={handleToggleChecklist}
-              />
-
-              <KanbanColumn
-                title="Em Teste"
-                status="testing"
-                color="border-purple-500"
-                dotColor="bg-purple-500"
-                maxLimit={3}
-                tasks={sortedTasks.filter((t) => t.status === 'testing')}
-                allTasks={tasks}
-                onEdit={handleOpenModal}
-                onDelete={handleDeleteTask}
-                onMove={handleMoveTask}
-                onToggleChecklist={handleToggleChecklist}
-              />
-
-              <KanbanColumn
-                title="Concluído"
-                status="done"
-                color="border-emerald-500"
-                dotColor="bg-emerald-500"
-                maxLimit={10}
-                tasks={sortedTasks.filter((t) => t.status === 'done')}
-                allTasks={tasks}
-                onEdit={handleOpenModal}
-                onDelete={handleDeleteTask}
-                onMove={handleMoveTask}
-                onToggleChecklist={handleToggleChecklist}
-              />
+              {COLUMNS.map((col) => {
+                const columnTasks = filteredTasks.filter(t => t.status === col.id)
+                return (
+                  <KanbanColumn
+                    key={col.id}
+                    column={col}
+                    tasks={columnTasks}
+                    onEdit={handleEditTask}
+                    onDelete={handleDeleteTask}
+                    onStatusChange={handleStatusChange}
+                  />
+                )
+              })}
             </motion.div>
           ) : (
             <TableView
               key="table"
-              tasks={sortedTasks}
-              onEdit={handleOpenModal}
+              tasks={filteredTasks}
+              onEdit={handleEditTask}
               onDelete={handleDeleteTask}
             />
           )}
         </AnimatePresence>
       </main>
 
-      {/* Modal Animado com AnimatePresence */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <TaskModal
-            task={editingTask}
-            allTasks={tasks}
-            onClose={() => {
-              setIsModalOpen(false)
-              setEditingTask(null)
-            }}
-            onSave={handleSaveTask}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Notificações Toast Flutuantes */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: 30, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl border text-sm font-medium flex items-center gap-2.5 backdrop-blur-md ${
-              toast.type === 'error'
-                ? 'bg-rose-950/90 text-rose-200 border-rose-500/40'
-                : toast.type === 'info'
-                ? 'bg-slate-900/90 text-slate-200 border-slate-700/60'
-                : 'bg-emerald-950/90 text-emerald-200 border-emerald-500/40'
-            }`}
-          >
-            <span>
-              {toast.type === 'error' ? '❌' : toast.type === 'info' ? 'ℹ️' : '✅'}
-            </span>
-            <span>{toast.message}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Modal de Criação / Edição de Tarefas */}
+      <TaskModal
+        isOpen={isModalOpen}
+        onClose={() => { setIsModalOpen(false); setEditingTask(null); }}
+        onSave={handleCreateOrUpdateTask}
+        taskToEdit={editingTask}
+      />
     </div>
   )
 }
