@@ -1,180 +1,188 @@
-import React, { useState, useEffect } from 'react';
-import Header from './components/Header';
-import KanbanColumn from './components/KanbanColumn';
-import TaskModal from './components/TaskModal';
+import { useState } from 'react'
+import Header from './components/Header'
+import KanbanColumn from './components/KanbanColumn'
+import TaskModal from './components/TaskModal'
+
+const INITIAL_TASKS = [
+  {
+    id: '1',
+    title: 'Implementar filtros de busca',
+    description: 'Adicionar barra de pesquisa em tempo real.',
+    status: 'todo',
+    priority: 'Baixa',
+    tag: 'Backend',
+    dueDate: '2026-10-20',
+    checklist: [
+      { id: 'c1', text: 'Filtrar por texto', completed: false },
+      { id: 'c2', text: 'Filtrar por prioridade e tag', completed: false },
+    ],
+  },
+  {
+    id: '2',
+    title: 'Desenvolver layout do Kanban',
+    description: 'Criar colunas estilizadas com Tailwind CSS.',
+    status: 'in_progress',
+    priority: 'Média',
+    tag: 'Design',
+    dueDate: '2026-10-15',
+    checklist: [
+      { id: 'c3', text: 'Desenhar esquema de cores', completed: true },
+      { id: 'c4', text: 'Criar componente de Cartão', completed: false },
+    ],
+  },
+  {
+    id: '3',
+    title: 'Configurar ambiente React',
+    description: 'Instalar dependências e organizar componentes.',
+    status: 'done',
+    priority: 'Alta',
+    tag: 'Frontend',
+    dueDate: '2026-10-10',
+    checklist: [
+      { id: 'c5', text: 'Instalar Node.js e Vite', completed: true },
+      { id: 'c6', text: 'Configurar Tailwind CSS', completed: true },
+    ],
+  },
+]
 
 export default function App() {
-  const [tasks, setTasks] = useState(() => {
-    const saved = localStorage.getItem('taskflow_tasks');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return [
-      { 
-        id: 1, 
-        title: 'Configurar ambiente React', 
-        description: 'Instalar dependências e organizar componentes.', 
-        priority: 'Alta', 
-        tag: 'Frontend', 
-        dueDate: '2026-10-10', 
-        subtasks: [
-          { id: 101, text: 'Instalar Node.js e Vite', completed: true },
-          { id: 102, text: 'Configurar Tailwind CSS', completed: true }
-        ],
-        status: 'done' 
-      },
-      { 
-        id: 2, 
-        title: 'Desenvolver layout do Kanban', 
-        description: 'Criar colunas estilizadas com Tailwind CSS.', 
-        priority: 'Média', 
-        tag: 'Design', 
-        dueDate: '2026-10-15', 
-        subtasks: [
-          { id: 201, text: 'Desenhar esquema de cores', completed: true },
-          { id: 202, text: 'Criar componente de Cartão', completed: false }
-        ],
-        status: 'doing' 
-      },
-      { 
-        id: 3, 
-        title: 'Implementar filtros de busca', 
-        description: 'Adicionar barra de pesquisa em tempo real.', 
-        priority: 'Baixa', 
-        tag: 'Backend', 
-        dueDate: '2026-10-20', 
-        subtasks: [
-          { id: 301, text: 'Filtrar por texto', completed: false },
-          { id: 302, text: 'Filtrar por prioridade e tag', completed: false }
-        ],
-        status: 'todo' 
-      },
-    ];
-  });
+  const [tasks, setTasks] = useState(INITIAL_TASKS)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingTask, setEditingTask] = useState(null)
+  const [search, setSearch] = useState('')
+  const [priorityFilter, setPriorityFilter] = useState('')
+  const [tagFilter, setTagFilter] = useState('')
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [priorityFilter, setPriorityFilter] = useState('Todas');
-  const [tagFilter, setTagFilter] = useState('Todas');
-  const [sortBy, setSortBy] = useState('newest');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [taskToEdit, setTaskToEdit] = useState(null);
-
-  useEffect(() => {
-    localStorage.setItem('taskflow_tasks', JSON.stringify(tasks));
-  }, [tasks]);
-
-  const handleSaveTask = (newTask) => {
-    if (taskToEdit) {
-      setTasks(tasks.map((t) => (t.id === newTask.id ? newTask : t)));
+  const handleSaveTask = (taskData) => {
+    if (editingTask) {
+      setTasks(tasks.map((t) => (t.id === editingTask.id ? { ...t, ...taskData } : t)))
     } else {
-      setTasks([newTask, ...tasks]);
+      const newTask = {
+        ...taskData,
+        id: Date.now().toString(),
+        checklist: taskData.checklist || [],
+      }
+      setTasks([...tasks, newTask])
     }
-    setTaskToEdit(null);
-  };
+    setEditingTask(null)
+    setIsModalOpen(false)
+  }
 
   const handleDeleteTask = (id) => {
-    setTasks(tasks.filter((t) => t.id !== id));
-  };
+    setTasks(tasks.filter((t) => t.id !== id))
+  }
 
-  const handleMoveTask = (id, direction) => {
-    const statusOrder = ['todo', 'doing', 'done'];
+  const handleMoveTask = (id, newStatus) => {
+    setTasks(tasks.map((t) => (t.id === id ? { ...t, status: newStatus } : t)))
+  }
+
+  const handleToggleChecklist = (taskId, itemIndex) => {
     setTasks(
       tasks.map((task) => {
-        if (task.id === id) {
-          const currentIndex = statusOrder.indexOf(task.status);
-          const newIndex = direction === 'right' ? currentIndex + 1 : currentIndex - 1;
-          if (newIndex >= 0 && newIndex < statusOrder.length) {
-            return { ...task, status: statusOrder[newIndex] };
-          }
-        }
-        return task;
+        if (task.id !== taskId) return task
+        const updatedChecklist = [...task.checklist]
+        updatedChecklist[itemIndex].completed = !updatedChecklist[itemIndex].completed
+        return { ...task, checklist: updatedChecklist }
       })
-    );
-  };
+    )
+  }
 
-  const handleOpenEdit = (task) => {
-    setTaskToEdit(task);
-    setIsModalOpen(true);
-  };
-
-  const processedTasks = tasks
-    .filter((t) => {
-      const matchesSearch =
-        t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.description.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesPriority = priorityFilter === 'Todas' || t.priority === priorityFilter;
-      const matchesTag = tagFilter === 'Todas' || t.tag === tagFilter;
-      return matchesSearch && matchesPriority && matchesTag;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'newest') return b.id - a.id;
-      if (sortBy === 'oldest') return a.id - b.id;
-      if (sortBy === 'az') return a.title.localeCompare(b.title);
-      return 0;
-    });
+  const filteredTasks = tasks.filter((t) => {
+    const matchesSearch =
+      t.title.toLowerCase().includes(search.toLowerCase()) ||
+      t.description.toLowerCase().includes(search.toLowerCase())
+    const matchesPriority = priorityFilter ? t.priority === priorityFilter : true
+    const matchesTag = tagFilter ? t.tag === tagFilter : true
+    return matchesSearch && matchesPriority && matchesTag
+  })
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
-      <Header
-        onOpenNewTask={() => {
-          setTaskToEdit(null);
-          setIsModalOpen(true);
-        }}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        priorityFilter={priorityFilter}
-        setPriorityFilter={setPriorityFilter}
-        tagFilter={tagFilter}
-        setTagFilter={setTagFilter}
-        sortBy={sortBy}
-        setSortBy={setSortBy}
-      />
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 lg:p-8 font-sans">
+      <div className="max-w-7xl mx-auto">
+        <Header onOpenNewTask={() => { setEditingTask(null); setIsModalOpen(true); }} />
 
-      <main className="flex-1 p-6 max-w-7xl mx-auto w-full overflow-x-auto">
-        <div className="flex gap-6 min-w-[960px] pb-6">
+        {/* Barra de Pesquisa e Filtros */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-8">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Pesquisar tarefas..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm min-h-[44px]"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 sm:flex items-center gap-2">
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              className="w-full sm:w-auto px-3 py-3 bg-slate-900 border border-slate-800 rounded-xl text-slate-200 text-sm min-h-[44px] focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">Todas Prioridades</option>
+              <option value="Baixa">Baixa</option>
+              <option value="Média">Média</option>
+              <option value="Alta">Alta</option>
+            </select>
+
+            <select
+              value={tagFilter}
+              onChange={(e) => setTagFilter(e.target.value)}
+              className="w-full sm:w-auto px-3 py-3 bg-slate-900 border border-slate-800 rounded-xl text-slate-200 text-sm min-h-[44px] focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">Todas Tags</option>
+              <option value="Frontend">Frontend</option>
+              <option value="Backend">Backend</option>
+              <option value="Design">Design</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Colunas do Kanban - Empilhadas no telemóvel, Lado a lado no Computador */}
+        <main className="flex flex-col md:flex-row gap-6 items-start">
           <KanbanColumn
             title="A Fazer"
             status="todo"
-            tasks={processedTasks}
-            onMove={handleMoveTask}
+            color="border-amber-500"
+            dotColor="bg-amber-500"
+            tasks={filteredTasks.filter((t) => t.status === 'todo')}
+            onEdit={(task) => { setEditingTask(task); setIsModalOpen(true); }}
             onDelete={handleDeleteTask}
-            onEdit={handleOpenEdit}
-            colorClass="bg-amber-500"
+            onMove={handleMoveTask}
+            onToggleChecklist={handleToggleChecklist}
           />
           <KanbanColumn
             title="Em Andamento"
-            status="doing"
-            tasks={processedTasks}
-            onMove={handleMoveTask}
+            status="in_progress"
+            color="border-indigo-500"
+            dotColor="bg-indigo-500"
+            tasks={filteredTasks.filter((t) => t.status === 'in_progress')}
+            onEdit={(task) => { setEditingTask(task); setIsModalOpen(true); }}
             onDelete={handleDeleteTask}
-            onEdit={handleOpenEdit}
-            colorClass="bg-indigo-500"
+            onMove={handleMoveTask}
+            onToggleChecklist={handleToggleChecklist}
           />
           <KanbanColumn
             title="Concluído"
             status="done"
-            tasks={processedTasks}
-            onMove={handleMoveTask}
+            color="border-emerald-500"
+            dotColor="bg-emerald-500"
+            tasks={filteredTasks.filter((t) => t.status === 'done')}
+            onEdit={(task) => { setEditingTask(task); setIsModalOpen(true); }}
             onDelete={handleDeleteTask}
-            onEdit={handleOpenEdit}
-            colorClass="bg-emerald-500"
+            onMove={handleMoveTask}
+            onToggleChecklist={handleToggleChecklist}
           />
-        </div>
-      </main>
+        </main>
+      </div>
 
-      <TaskModal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setTaskToEdit(null);
-        }}
-        onSave={handleSaveTask}
-        taskToEdit={taskToEdit}
-      />
+      {isModalOpen && (
+        <TaskModal
+          task={editingTask}
+          onClose={() => { setIsModalOpen(false); setEditingTask(null); }}
+          onSave={handleSaveTask}
+        />
+      )}
     </div>
-  );
+  )
 }
