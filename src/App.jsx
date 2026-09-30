@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Header from './components/Header'
 import KanbanColumn from './components/KanbanColumn'
 import TaskModal from './components/TaskModal'
@@ -53,6 +53,30 @@ export default function App() {
   const [priorityFilter, setPriorityFilter] = useState('')
   const [tagFilter, setTagFilter] = useState('')
 
+  // Estado para controlar o tamanho da fonte (com preferência salva no localStorage)
+  const [fontSize, setFontSize] = useState(() => {
+    const savedFont = localStorage.getItem('taskflow_fontsize')
+    return savedFont ? Number(savedFont) : 16
+  })
+
+  // Aplica o tamanho da fonte diretamente na tag <html> e guarda no localStorage
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${fontSize}px`
+    localStorage.setItem('taskflow_fontsize', fontSize.toString())
+  }, [fontSize])
+
+  const handleIncreaseFont = () => {
+    setFontSize((prev) => Math.min(prev + 2, 22)) // Tamanho máximo: 22px
+  }
+
+  const handleDecreaseFont = () => {
+    setFontSize((prev) => Math.max(prev - 2, 12)) // Tamanho mínimo: 12px
+  }
+
+  const handleResetFont = () => {
+    setFontSize(16) // Tamanho padrão: 16px
+  }
+
   const handleSaveTask = (taskData) => {
     if (editingTask) {
       setTasks(tasks.map((t) => (t.id === editingTask.id ? { ...t, ...taskData } : t)))
@@ -99,7 +123,16 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 lg:p-8 font-sans">
       <div className="max-w-7xl mx-auto">
-        <Header onOpenNewTask={() => { setEditingTask(null); setIsModalOpen(true); }} />
+        <Header
+          onOpenNewTask={() => {
+            setEditingTask(null)
+            setIsModalOpen(true)
+          }}
+          fontSize={fontSize}
+          onIncreaseFont={handleIncreaseFont}
+          onDecreaseFont={handleDecreaseFont}
+          onResetFont={handleResetFont}
+        />
 
         {/* Barra de Pesquisa e Filtros */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-8">
@@ -138,7 +171,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Colunas do Kanban - Empilhadas no telemóvel, Lado a lado no Computador */}
+        {/* Colunas do Kanban */}
         <main className="flex flex-col md:flex-row gap-6 items-start">
           <KanbanColumn
             title="A Fazer"
@@ -146,7 +179,10 @@ export default function App() {
             color="border-amber-500"
             dotColor="bg-amber-500"
             tasks={filteredTasks.filter((t) => t.status === 'todo')}
-            onEdit={(task) => { setEditingTask(task); setIsModalOpen(true); }}
+            onEdit={(task) => {
+              setEditingTask(task)
+              setIsModalOpen(true)
+            }}
             onDelete={handleDeleteTask}
             onMove={handleMoveTask}
             onToggleChecklist={handleToggleChecklist}
@@ -157,7 +193,10 @@ export default function App() {
             color="border-indigo-500"
             dotColor="bg-indigo-500"
             tasks={filteredTasks.filter((t) => t.status === 'in_progress')}
-            onEdit={(task) => { setEditingTask(task); setIsModalOpen(true); }}
+            onEdit={(task) => {
+              setEditingTask(task)
+              setIsModalOpen(true)
+            }}
             onDelete={handleDeleteTask}
             onMove={handleMoveTask}
             onToggleChecklist={handleToggleChecklist}
@@ -168,7 +207,10 @@ export default function App() {
             color="border-emerald-500"
             dotColor="bg-emerald-500"
             tasks={filteredTasks.filter((t) => t.status === 'done')}
-            onEdit={(task) => { setEditingTask(task); setIsModalOpen(true); }}
+            onEdit={(task) => {
+              setEditingTask(task)
+              setIsModalOpen(true)
+            }}
             onDelete={handleDeleteTask}
             onMove={handleMoveTask}
             onToggleChecklist={handleToggleChecklist}
@@ -179,7 +221,10 @@ export default function App() {
       {isModalOpen && (
         <TaskModal
           task={editingTask}
-          onClose={() => { setIsModalOpen(false); setEditingTask(null); }}
+          onClose={() => {
+            setIsModalOpen(false)
+            setEditingTask(null)
+          }}
           onSave={handleSaveTask}
         />
       )}
