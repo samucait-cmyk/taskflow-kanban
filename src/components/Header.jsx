@@ -1,10 +1,10 @@
 import PomodoroTimer from './PomodoroTimer'
 
-export default function Header({ onNewTask, fontSize, setFontSize }) {
+export default function Header({ onNewTask, onIncreaseFont, onDecreaseFont, currentFontSize }) {
   return (
     <header className="bg-slate-900/90 border-b border-slate-800 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-6 py-3">
       <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
-        {/* Esquerda: Logo & Marca + Ajuste de Texto (Apenas Mobile/Tablet) */}
+        {/* Esquerda: Logo & Marca + Botões A- / A+ (Apenas Mobile/Tablet) */}
         <div className="flex items-center justify-between w-full md:w-auto gap-3 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="bg-gradient-to-tr from-indigo-600 to-violet-500 text-white p-2 rounded-2xl font-extrabold text-lg shadow-lg shadow-indigo-500/25">
@@ -25,40 +25,24 @@ export default function Header({ onNewTask, fontSize, setFontSize }) {
             </div>
           </div>
 
-          {/* Ajuste de Texto: Oculto em Desktops/Laptops (lg:hidden) e Visível apenas em Smartphones e Tablets */}
-          <div className="flex lg:hidden items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
-            <span className="text-[10px] text-slate-400 px-1 font-medium hidden xs:inline">
+          {/* Botões Aumentar (A+) e Diminuir (A-) Texto: Oculto no Desktop (lg:hidden) */}
+          <div className="flex lg:hidden items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+            <span className="text-[10px] text-slate-400 px-1 font-semibold hidden xs:inline">
               Texto:
             </span>
             <button
-              onClick={() => setFontSize('small')}
-              className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition-all cursor-pointer ${
-                fontSize === 'small'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
+              onClick={onDecreaseFont}
+              title="Diminuir tamanho do texto"
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs transition-all cursor-pointer active:scale-95 border border-slate-700/50"
             >
-              Pequena
+              A-
             </button>
             <button
-              onClick={() => setFontSize('normal')}
-              className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition-all cursor-pointer ${
-                fontSize === 'normal'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
+              onClick={onIncreaseFont}
+              title="Aumentar tamanho do texto"
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all cursor-pointer active:scale-95 shadow-sm shadow-indigo-500/30"
             >
-              Normal
-            </button>
-            <button
-              onClick={() => setFontSize('large')}
-              className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold transition-all cursor-pointer ${
-                fontSize === 'large'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Grande
+              A+
             </button>
           </div>
         </div>

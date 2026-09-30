@@ -62,12 +62,15 @@ export default function App() {
     ]
   })
 
-  // Estados de Filtro, Ordenação e Visualização
+  // Estados de Filtro, Tamanho de Texto Numérico (Píxeis), Ordenação e Vista
   const [search, setSearch] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('')
   const [tagFilter, setTagFilter] = useState('')
   const [sortBy, setSortBy] = useState('default')
   const [viewMode, setViewMode] = useState('kanban')
+  
+  // Base do tamanho da fonte em px (padrão: 16px, min: 12px, max: 22px)
+  const [fontSize, setFontSize] = useState(16)
 
   // Modais e Toasts
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -83,11 +86,26 @@ export default function App() {
     }, 3500)
   }
 
+  // Funções de Aumento e Diminuição de Fonte
+  const handleIncreaseFont = () => {
+    setFontSize((prev) => Math.min(prev + 2, 22))
+  }
+
+  const handleDecreaseFont = () => {
+    setFontSize((prev) => Math.max(prev - 2, 12))
+  }
+
+  // Efeito responsável por alterar dinamicamente a raiz do documento (funciona em mobile)
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${fontSize}px`
+    document.body.style.fontSize = `${fontSize}px`
+  }, [fontSize])
+
   useEffect(() => {
     localStorage.setItem('taskflow_tasks', JSON.stringify(tasks))
   }, [tasks])
 
-  // Lógica de Filtragem das Tarefas
+  // Lógica de Filtragem
   const filteredTasks = tasks.filter((task) => {
     const matchesSearch =
       task.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -98,7 +116,7 @@ export default function App() {
     return matchesSearch && matchesPriority && matchesTag
   })
 
-  // Lógica de Ordenação Inteligente
+  // Lógica de Ordenação
   const sortedTasks = [...filteredTasks].sort((a, b) => {
     if (sortBy === 'priority') {
       const weights = { Urgente: 4, Alta: 3, Média: 2, Baixa: 1 }
@@ -188,9 +206,12 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white">
-      {/* Cabeçalho com Único Temporizador */}
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white transition-all">
+      {/* Cabeçalho com Temporizador Centralizado e Controlo de Fonte A- / A+ */}
       <Header
+        onIncreaseFont={handleIncreaseFont}
+        onDecreaseFont={handleDecreaseFont}
+        currentFontSize={fontSize}
         onNewTask={() => {
           setEditingTask(null)
           setIsModalOpen(true)
@@ -211,7 +232,7 @@ export default function App() {
         {/* Dashboard de Indicadores */}
         <Dashboard tasks={tasks} />
 
-        {/* Barra de Filtros Completa, Ordenação, Backups e Alternador de Vista */}
+        {/* Barra de Filtros, Ordenação, Backups e Alternador de Vista */}
         <div className="flex flex-col lg:flex-row items-center gap-3 bg-slate-900/80 p-3.5 sm:p-4 rounded-2xl border border-slate-800/80 shadow-lg">
           {/* Campo de Pesquisa */}
           <div className="relative flex-1 w-full">
