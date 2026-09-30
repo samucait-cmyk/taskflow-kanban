@@ -25,7 +25,7 @@ export default function Header({ onNewTask, fontSize, setFontSize }) {
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Controlo de Tamanho de Fonte (Visível em telemóveis e tablets, oculto em PC/monitores) */}
+        {/* Controlo de Tamanho de Fonte (Visível apenas em telemóveis e tablets, oculto em PCs/laptops) */}
         <div className="flex lg:hidden items-center bg-slate-950 border border-slate-800 rounded-xl p-1 text-sm shadow-inner">
           <button
             onClick={decreaseFontSize}
