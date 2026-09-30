@@ -1,11 +1,12 @@
-import React from 'react'
+const WORKFLOW_STAGES = ['todo', 'blocked', 'in_progress', 'ready_to_test', 'testing', 'done']
 
-export default function TaskCard({ 
-  task, 
-  onEdit, 
-  onDelete, 
+export default function TaskCard({
+  task,
+  onEdit,
+  onDelete,
   onToggleChecklist,
-  onStatusChange 
+  onStatusChange,
+  onMove,
 }) {
   const handleDragStart = (e) => {
     e.dataTransfer.setData('text/plain', task.id)
@@ -20,17 +21,40 @@ export default function TaskCard({
   }
 
   const checklist = task.checklist || []
-  const completedCount = checklist.filter(item => item.completed).length
+  const completedCount = checklist.filter((item) => item.completed).length
+
+  // Identificação do estágio atual para navegação pelas setas
+  const currentIndex = WORKFLOW_STAGES.indexOf(task.status)
+
+  const moveTask = (targetStatus) => {
+    if (onStatusChange) {
+      onStatusChange(task.id, targetStatus)
+    } else if (onMove) {
+      onMove(task.id, targetStatus)
+    }
+  }
+
+  const handlePrevStage = () => {
+    if (currentIndex > 0) {
+      moveTask(WORKFLOW_STAGES[currentIndex - 1])
+    }
+  }
+
+  const handleNextStage = () => {
+    if (currentIndex < WORKFLOW_STAGES.length - 1) {
+      moveTask(WORKFLOW_STAGES[currentIndex + 1])
+    }
+  }
 
   return (
     <div
       draggable
       onDragStart={handleDragStart}
-      className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 shadow-md hover:border-slate-700 transition-all cursor-grab active:cursor-grabbing flex flex-col gap-3 group"
+      className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-md hover:border-slate-700 transition-all cursor-grab active:cursor-grabbing flex flex-col gap-3 group"
     >
       {/* Cabeçalho do Cartão */}
       <div className="flex items-start justify-between gap-2">
-        <h3 className="font-semibold text-slate-100 text-sm leading-snug">
+        <h3 className="font-semibold text-slate-100 text-xs sm:text-sm leading-snug">
           {task.title}
         </h3>
         {task.priority && (
@@ -42,43 +66,43 @@ export default function TaskCard({
 
       {/* Descrição */}
       {task.description && (
-        <p className="text-xs text-slate-400 line-clamp-2">
+        <p className="text-[11px] text-slate-400 line-clamp-2">
           {task.description}
         </p>
       )}
 
-      {/* Tags e Data */}
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Tags e Data Limite */}
+      <div className="flex flex-wrap items-center gap-1.5">
         {task.tag && (
-          <span className="text-[11px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md flex items-center gap-1 border border-slate-700/50">
+          <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-lg flex items-center gap-1 border border-slate-700/50">
             🏷️ {task.tag}
           </span>
         )}
         {task.dueDate && (
-          <span className="text-[11px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md flex items-center gap-1 border border-slate-700/50">
+          <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-lg flex items-center gap-1 border border-slate-700/50">
             📅 {task.dueDate}
           </span>
         )}
       </div>
 
-      {/* Checklist / Subtarefas */}
+      {/* Checklist / Subtarefas com Contador */}
       {checklist.length > 0 && (
-        <div className="flex flex-col gap-1.5 pt-1 border-t border-slate-800/80">
-          <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium">
+        <div className="flex flex-col gap-1 pt-2 border-t border-slate-800/80">
+          <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium">
             <span>Checklist</span>
             <span>{completedCount}/{checklist.length}</span>
           </div>
           <div className="flex flex-col gap-1">
             {checklist.map((item, idx) => (
-              <label 
-                key={idx} 
-                className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white"
+              <label
+                key={idx}
+                className="flex items-center gap-2 text-[11px] text-slate-300 cursor-pointer hover:text-white"
               >
                 <input
                   type="checkbox"
                   checked={item.completed}
                   onChange={() => onToggleChecklist && onToggleChecklist(task.id, idx)}
-                  className="rounded border-slate-700 bg-slate-950 text-indigo-600 focus:ring-0 cursor-pointer"
+                  className="rounded border-slate-700 bg-slate-950 text-indigo-600 focus:ring-0 cursor-pointer w-3.5 h-3.5"
                 />
                 <span className={item.completed ? 'line-through text-slate-500' : ''}>
                   {item.text}
@@ -89,29 +113,52 @@ export default function TaskCard({
         </div>
       )}
 
-      {/* Rodapé de Ações do Cartão */}
-      <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 mt-1">
-        <button
-          type="button"
-          onClick={() => onStatusChange && onStatusChange(task.id, 'in_progress')}
-          className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-400 transition-colors cursor-pointer"
-          title="Iniciar / Mover para Em Andamento"
-        >
-          ▶️
-        </button>
+      {/* Rodapé com Navegação de Duas Setas (◀ e ▶) e Ações */}
+      <div className="flex items-center justify-between pt-2.5 border-t border-slate-800/80 mt-1">
+        {/* Duas Setas para Navegar entre Colunas */}
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={handlePrevStage}
+            disabled={currentIndex <= 0}
+            title={currentIndex <= 0 ? 'Já está no início' : 'Mover para a coluna anterior'}
+            className={`px-2 py-1 rounded-lg border text-xs font-bold transition-all ${
+              currentIndex <= 0
+                ? 'bg-slate-950/40 text-slate-600 border-slate-800/40 cursor-not-allowed'
+                : 'bg-slate-800 hover:bg-slate-700 text-indigo-300 border-slate-700/60 cursor-pointer'
+            }`}
+          >
+            ◀
+          </button>
 
+          <button
+            type="button"
+            onClick={handleNextStage}
+            disabled={currentIndex >= WORKFLOW_STAGES.length - 1}
+            title={currentIndex >= WORKFLOW_STAGES.length - 1 ? 'Já está concluído' : 'Mover para a próxima coluna'}
+            className={`px-2 py-1 rounded-lg border text-xs font-bold transition-all ${
+              currentIndex >= WORKFLOW_STAGES.length - 1
+                ? 'bg-slate-950/40 text-slate-600 border-slate-800/40 cursor-not-allowed'
+                : 'bg-slate-800 hover:bg-slate-700 text-indigo-300 border-slate-700/60 cursor-pointer'
+            }`}
+          >
+            ▶
+          </button>
+        </div>
+
+        {/* Botões Editar e Excluir */}
         <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => onEdit(task)}
-            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 transition-colors cursor-pointer"
+            className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-[11px] font-semibold text-slate-300 transition-colors cursor-pointer"
           >
             Editar
           </button>
           <button
             type="button"
             onClick={() => onDelete(task.id)}
-            className="px-2.5 py-1 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 text-xs font-medium text-rose-300 transition-colors cursor-pointer border border-rose-900/40"
+            className="px-2.5 py-1 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 text-[11px] font-semibold text-rose-300 transition-colors cursor-pointer border border-rose-900/40"
           >
             Excluir
           </button>

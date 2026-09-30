@@ -2,11 +2,11 @@ import PomodoroTimer from './PomodoroTimer'
 
 export default function Header({ onNewTask }) {
   return (
-    <header className="bg-slate-900/80 border-b border-slate-800 backdrop-blur-md sticky top-0 z-40 px-4 py-3">
-      <div className="max-w-[1600px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-        {/* Logo & Marca */}
-        <div className="flex items-center gap-3">
-          <div className="bg-indigo-600 text-white p-2 rounded-xl font-extrabold text-lg shadow-lg shadow-indigo-500/30">
+    <header className="bg-slate-900/90 border-b border-slate-800 backdrop-blur-md sticky top-0 z-40 px-4 sm:px-6 py-3">
+      <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+        {/* Esquerda: Logo & Marca */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="bg-gradient-to-tr from-indigo-600 to-violet-500 text-white p-2.5 rounded-2xl font-extrabold text-xl shadow-lg shadow-indigo-500/25">
             ⚡
           </div>
           <div>
@@ -24,15 +24,19 @@ export default function Header({ onNewTask }) {
           </div>
         </div>
 
-        {/* Único Temporizador Pomodoro + Botão Criar Tarefa */}
-        <div className="flex items-center gap-3">
+        {/* Centro: Temporizador Pomodoro Centralizado */}
+        <div className="flex-1 flex justify-center w-full md:w-auto">
           <PomodoroTimer />
+        </div>
 
+        {/* Direita: Botão Nova Tarefa */}
+        <div className="flex items-center gap-3 shrink-0">
           <button
             onClick={onNewTask}
-            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 cursor-pointer shrink-0"
+            className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all shadow-lg shadow-indigo-500/25 cursor-pointer"
           >
-            <span>+</span> Nova Tarefa
+            <span className="text-base leading-none">+</span>
+            <span>Nova Tarefa</span>
           </button>
         </div>
       </div>
