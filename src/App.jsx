@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import Header from './components/Header'
 import KanbanColumn from './components/KanbanColumn'
 import TaskModal from './components/TaskModal'
 
-const INITIAL_TASKS = [
+const initialTasks = [
   {
     id: '1',
     title: 'Implementar filtros de busca',
@@ -46,50 +47,52 @@ const INITIAL_TASKS = [
 ]
 
 export default function App() {
-  const [tasks, setTasks] = useState(INITIAL_TASKS)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingTask, setEditingTask] = useState(null)
+  const [tasks, setTasks] = useState(() => {
+    const saved = localStorage.getItem('taskflow_tasks')
+    return saved ? JSON.parse(saved) : initialTasks
+  })
+
   const [search, setSearch] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('')
   const [tagFilter, setTagFilter] = useState('')
+  const [fontSize, setFontSize] = useState('16px')
 
-  // Estado para controlar o tamanho da fonte (com preferência salva no localStorage)
-  const [fontSize, setFontSize] = useState(() => {
-    const savedFont = localStorage.getItem('taskflow_fontsize')
-    return savedFont ? Number(savedFont) : 16
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingTask, setEditingTask] = useState(null)
+
+  useEffect(() => {
+    localStorage.setItem('taskflow_tasks', JSON.stringify(tasks))
+  }, [tasks])
+
+  const filteredTasks = tasks.filter((task) => {
+    const matchesSearch =
+      task.title.toLowerCase().includes(search.toLowerCase()) ||
+      task.description.toLowerCase().includes(search.toLowerCase())
+    const matchesPriority = priorityFilter ? task.priority === priorityFilter : true
+    const matchesTag = tagFilter ? task.tag === tagFilter : true
+
+    return matchesSearch && matchesPriority && matchesTag
   })
 
-  // Aplica o tamanho da fonte diretamente na tag <html> e guarda no localStorage
-  useEffect(() => {
-    document.documentElement.style.fontSize = `${fontSize}px`
-    localStorage.setItem('taskflow_fontsize', fontSize.toString())
-  }, [fontSize])
-
-  const handleIncreaseFont = () => {
-    setFontSize((prev) => Math.min(prev + 2, 22)) // Tamanho máximo: 22px
-  }
-
-  const handleDecreaseFont = () => {
-    setFontSize((prev) => Math.max(prev - 2, 12)) // Tamanho mínimo: 12px
-  }
-
-  const handleResetFont = () => {
-    setFontSize(16) // Tamanho padrão: 16px
+  const handleOpenModal = (task = null) => {
+    setEditingTask(task)
+    setIsModalOpen(true)
   }
 
   const handleSaveTask = (taskData) => {
     if (editingTask) {
-      setTasks(tasks.map((t) => (t.id === editingTask.id ? { ...t, ...taskData } : t)))
+      setTasks(
+        tasks.map((t) => (t.id === editingTask.id ? { ...t, ...taskData } : t))
+      )
     } else {
       const newTask = {
         ...taskData,
         id: Date.now().toString(),
-        checklist: taskData.checklist || [],
       }
       setTasks([...tasks, newTask])
     }
-    setEditingTask(null)
     setIsModalOpen(false)
+    setEditingTask(null)
   }
 
   const handleDeleteTask = (id) => {
@@ -97,7 +100,9 @@ export default function App() {
   }
 
   const handleMoveTask = (id, newStatus) => {
-    setTasks(tasks.map((t) => (t.id === id ? { ...t, status: newStatus } : t)))
+    setTasks(
+      tasks.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
+    )
   }
 
   const handleToggleChecklist = (taskId, itemIndex) => {
@@ -105,52 +110,47 @@ export default function App() {
       tasks.map((task) => {
         if (task.id !== taskId) return task
         const updatedChecklist = [...task.checklist]
-        updatedChecklist[itemIndex].completed = !updatedChecklist[itemIndex].completed
+        updatedChecklist[itemIndex] = {
+          ...updatedChecklist[itemIndex],
+          completed: !updatedChecklist[itemIndex].completed,
+        }
         return { ...task, checklist: updatedChecklist }
       })
     )
   }
 
-  const filteredTasks = tasks.filter((t) => {
-    const matchesSearch =
-      t.title.toLowerCase().includes(search.toLowerCase()) ||
-      t.description.toLowerCase().includes(search.toLowerCase())
-    const matchesPriority = priorityFilter ? t.priority === priorityFilter : true
-    const matchesTag = tagFilter ? t.tag === tagFilter : true
-    return matchesSearch && matchesPriority && matchesTag
-  })
-
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 lg:p-8 font-sans">
-      <div className="max-w-7xl mx-auto">
-        <Header
-          onOpenNewTask={() => {
-            setEditingTask(null)
-            setIsModalOpen(true)
-          }}
-          fontSize={fontSize}
-          onIncreaseFont={handleIncreaseFont}
-          onDecreaseFont={handleDecreaseFont}
-          onResetFont={handleResetFont}
-        />
+    <div
+      style={{ fontSize }}
+      className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white"
+    >
+      <Header
+        onNewTask={() => handleOpenModal()}
+        fontSize={fontSize}
+        setFontSize={setFontSize}
+      />
 
-        {/* Barra de Pesquisa e Filtros */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-8">
-          <div className="relative flex-1">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
+        {/* Barra de Filtros */}
+        <div className="flex flex-col md:flex-row items-center gap-3 bg-slate-900/80 p-3.5 sm:p-4 rounded-2xl border border-slate-800/80 shadow-lg">
+          <div className="relative flex-1 w-full">
+            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm">
+              🔍
+            </span>
             <input
               type="text"
               placeholder="Pesquisar tarefas..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm min-h-[44px]"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm transition-all"
             />
           </div>
 
-          <div className="grid grid-cols-2 sm:flex items-center gap-2">
+          <div className="grid grid-cols-2 sm:flex items-center gap-3 w-full md:w-auto">
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
-              className="w-full sm:w-auto px-3 py-3 bg-slate-900 border border-slate-800 rounded-xl text-slate-200 text-sm min-h-[44px] focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full sm:w-auto px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
             >
               <option value="">Todas Prioridades</option>
               <option value="Baixa">Baixa</option>
@@ -161,7 +161,7 @@ export default function App() {
             <select
               value={tagFilter}
               onChange={(e) => setTagFilter(e.target.value)}
-              className="w-full sm:w-auto px-3 py-3 bg-slate-900 border border-slate-800 rounded-xl text-slate-200 text-sm min-h-[44px] focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full sm:w-auto px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
             >
               <option value="">Todas Tags</option>
               <option value="Frontend">Frontend</option>
@@ -171,63 +171,59 @@ export default function App() {
           </div>
         </div>
 
-        {/* Colunas do Kanban */}
-        <main className="flex flex-col md:flex-row gap-6 items-start">
+        {/* Quadro Kanban */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
           <KanbanColumn
             title="A Fazer"
             status="todo"
             color="border-amber-500"
             dotColor="bg-amber-500"
             tasks={filteredTasks.filter((t) => t.status === 'todo')}
-            onEdit={(task) => {
-              setEditingTask(task)
-              setIsModalOpen(true)
-            }}
+            onEdit={handleOpenModal}
             onDelete={handleDeleteTask}
             onMove={handleMoveTask}
             onToggleChecklist={handleToggleChecklist}
           />
+
           <KanbanColumn
             title="Em Andamento"
             status="in_progress"
             color="border-indigo-500"
             dotColor="bg-indigo-500"
             tasks={filteredTasks.filter((t) => t.status === 'in_progress')}
-            onEdit={(task) => {
-              setEditingTask(task)
-              setIsModalOpen(true)
-            }}
+            onEdit={handleOpenModal}
             onDelete={handleDeleteTask}
             onMove={handleMoveTask}
             onToggleChecklist={handleToggleChecklist}
           />
+
           <KanbanColumn
             title="Concluído"
             status="done"
             color="border-emerald-500"
             dotColor="bg-emerald-500"
             tasks={filteredTasks.filter((t) => t.status === 'done')}
-            onEdit={(task) => {
-              setEditingTask(task)
-              setIsModalOpen(true)
-            }}
+            onEdit={handleOpenModal}
             onDelete={handleDeleteTask}
             onMove={handleMoveTask}
             onToggleChecklist={handleToggleChecklist}
           />
-        </main>
-      </div>
+        </div>
+      </main>
 
-      {isModalOpen && (
-        <TaskModal
-          task={editingTask}
-          onClose={() => {
-            setIsModalOpen(false)
-            setEditingTask(null)
-          }}
-          onSave={handleSaveTask}
-        />
-      )}
+      {/* Modal Animado com AnimatePresence */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <TaskModal
+            task={editingTask}
+            onClose={() => {
+              setIsModalOpen(false)
+              setEditingTask(null)
+            }}
+            onSave={handleSaveTask}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
