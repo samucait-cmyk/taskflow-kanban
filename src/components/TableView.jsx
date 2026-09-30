@@ -13,7 +13,7 @@ export default function TableView({ tasks = [], onEdit, onDelete }) {
   if (!tasks || tasks.length === 0) {
     return (
       <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-12 text-center text-slate-500">
-        <p className="text-sm">Nenhuma tarefa encontrada para exibir na tabela.</p>
+        <p className="text-xs sm:text-sm">Nenhuma tarefa encontrada para exibir na tabela.</p>
       </div>
     )
   }
@@ -42,7 +42,7 @@ export default function TableView({ tasks = [], onEdit, onDelete }) {
               const statusInfo = STATUS_LABELS[task.status] || { label: task.status, badge: 'bg-slate-800 text-slate-300' }
               return (
                 <tr key={task.id} className="transition-colors hover:bg-slate-800/40">
-                  <td className="py-3.5 px-4">
+                  <td className="py-3 px-4">
                     <div className="font-semibold text-slate-100">{task.title}</div>
                     {task.description && (
                       <div className="text-xs text-slate-400 truncate max-w-xs sm:max-w-md">
@@ -50,15 +50,15 @@ export default function TableView({ tasks = [], onEdit, onDelete }) {
                       </div>
                     )}
                   </td>
-                  <td className="py-3.5 px-4">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-md border text-xs font-medium ${statusInfo.badge}`}>
+                  <td className="py-3 px-4">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md border text-xs font-medium ${statusInfo.badge}`}>
                       {statusInfo.label}
                     </span>
                   </td>
-                  <td className="py-3.5 px-4">
+                  <td className="py-3 px-4">
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-md border text-xs font-medium ${
-                        task.priority === 'Alta'
+                      className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-medium ${
+                        task.priority === 'Alta' || task.priority === 'Urgente'
                           ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
                           : task.priority === 'Média'
                           ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
@@ -68,29 +68,29 @@ export default function TableView({ tasks = [], onEdit, onDelete }) {
                       {task.priority}
                     </span>
                   </td>
-                  <td className="py-3.5 px-4">
+                  <td className="py-3 px-4">
                     {task.tag ? (
-                      <span className="text-xs bg-slate-800 text-slate-300 px-2.5 py-1 rounded-md border border-slate-700/50">
+                      <span className="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700/50">
                         {task.tag}
                       </span>
                     ) : (
                       <span className="text-slate-600">—</span>
                     )}
                   </td>
-                  <td className="py-3.5 px-4 text-slate-400">
+                  <td className="py-3 px-4 text-slate-400">
                     {task.dueDate ? task.dueDate : <span className="text-slate-600">—</span>}
                   </td>
-                  <td className="py-3.5 px-4 text-right">
+                  <td className="py-3 px-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => onEdit(task)}
-                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium cursor-pointer"
                       >
                         Editar
                       </button>
                       <button
                         onClick={() => onDelete(task.id)}
-                        className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-xs font-medium border border-rose-500/20 transition-colors cursor-pointer"
+                        className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-xs font-medium border border-rose-500/20 cursor-pointer"
                       >
                         Excluir
                       </button>
