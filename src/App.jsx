@@ -48,6 +48,11 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
 
+  // Aplica o tamanho de fonte globalmente no documento (raiz html)
+  useEffect(() => {
+    document.documentElement.style.fontSize = fontSize
+  }, [fontSize])
+
   useEffect(() => {
     localStorage.setItem('taskflow_tasks', JSON.stringify(tasks))
   }, [tasks])
@@ -159,7 +164,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Quadro Kanban (6 Colunas com scroll horizontal em telas menores e grid fluido) */}
+        {/* Quadro Kanban (6 Colunas) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5 items-start">
           <KanbanColumn
             title="A Fazer"
