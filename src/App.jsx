@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import Header from './components/Header'
 import KanbanColumn from './components/KanbanColumn'
 import TaskModal from './components/TaskModal'
@@ -20,7 +20,18 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
 
+  // Estado para o sistema de Toast Notifications
+  const [toast, setToast] = useState(null)
+
   const fileInputRef = useRef(null)
+
+  // Função para disparar toasts elegantes
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => {
+      setToast(null)
+    }, 3500)
+  }
 
   // Aplica o tamanho de fonte globalmente no documento (raiz html)
   useEffect(() => {
@@ -67,12 +78,14 @@ export default function App() {
       setTasks(
         tasks.map((t) => (t.id === editingTask.id ? { ...t, ...taskData } : t))
       )
+      showToast('Tarefa atualizada com sucesso!')
     } else {
       const newTask = {
         ...taskData,
         id: Date.now().toString(),
       }
       setTasks([...tasks, newTask])
+      showToast('Nova tarefa criada com sucesso!')
     }
     setIsModalOpen(false)
     setEditingTask(null)
@@ -80,12 +93,14 @@ export default function App() {
 
   const handleDeleteTask = (id) => {
     setTasks(tasks.filter((t) => t.id !== id))
+    showToast('Tarefa eliminada com sucesso!', 'info')
   }
 
   const handleMoveTask = (id, newStatus) => {
     setTasks(
       tasks.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
     )
+    showToast('Estado da tarefa atualizado!', 'success')
   }
 
   const handleToggleChecklist = (taskId, itemIndex) => {
@@ -111,6 +126,7 @@ export default function App() {
     document.body.appendChild(downloadAnchor)
     downloadAnchor.click()
     downloadAnchor.remove()
+    showToast('Backup exportado com sucesso!')
   }
 
   // Funcionalidade de Importar Backup (JSON)
@@ -123,19 +139,19 @@ export default function App() {
           const importedTasks = JSON.parse(event.target.result)
           if (Array.isArray(importedTasks)) {
             setTasks(importedTasks)
-            alert("Backup importado com sucesso!")
+            showToast('Backup importado com sucesso!')
           } else {
-            alert("Formato de ficheiro inválido.")
+            showToast('Formato de ficheiro inválido.', 'error')
           }
         } catch (error) {
-          alert("Erro ao ler o ficheiro JSON.")
+          showToast('Erro ao ler o ficheiro JSON.', 'error')
         }
       }
     }
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white relative">
       <Header
         onNewTask={() => handleOpenModal()}
         fontSize={fontSize}
@@ -323,6 +339,29 @@ export default function App() {
             }}
             onSave={handleSaveTask}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Notificações Toast Flutuantes */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl border text-sm font-medium flex items-center gap-2.5 backdrop-blur-md ${
+              toast.type === 'error'
+                ? 'bg-rose-950/90 text-rose-200 border-rose-500/40'
+                : toast.type === 'info'
+                ? 'bg-slate-900/90 text-slate-200 border-slate-700/60'
+                : 'bg-emerald-950/90 text-emerald-200 border-emerald-500/40'
+            }`}
+          >
+            <span>
+              {toast.type === 'error' ? '❌' : toast.type === 'info' ? 'ℹ️' : '✅'}
+            </span>
+            <span>{toast.message}</span>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
