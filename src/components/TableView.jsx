@@ -9,8 +9,8 @@ const STATUS_LABELS = {
   done: { label: 'Concluído', badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' },
 }
 
-export default function TableView({ tasks, onEdit, onDelete }) {
-  if (tasks.length === 0) {
+export default function TableView({ tasks = [], onEdit, onDelete }) {
+  if (!tasks || tasks.length === 0) {
     return (
       <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-12 text-center text-slate-500">
         <p className="text-sm">Nenhuma tarefa encontrada para exibir na tabela.</p>
@@ -41,11 +41,7 @@ export default function TableView({ tasks, onEdit, onDelete }) {
             {tasks.map((task) => {
               const statusInfo = STATUS_LABELS[task.status] || { label: task.status, badge: 'bg-slate-800 text-slate-300' }
               return (
-                <motion.tr
-                  key={task.id}
-                  whileHover={{ backgroundColor: 'rgba(30, 41, 59, 0.4)' }}
-                  className="transition-colors"
-                >
+                <tr key={task.id} className="transition-colors hover:bg-slate-800/40">
                   <td className="py-3.5 px-4">
                     <div className="font-semibold text-slate-100">{task.title}</div>
                     {task.description && (
@@ -100,7 +96,7 @@ export default function TableView({ tasks, onEdit, onDelete }) {
                       </button>
                     </div>
                   </td>
-                </motion.tr>
+                </tr>
               )
             })}
           </tbody>
