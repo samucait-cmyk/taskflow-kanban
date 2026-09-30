@@ -1,23 +1,34 @@
 import { motion, AnimatePresence } from 'framer-motion'
 
+const STATUS_FLOW = ['todo', 'blocked', 'in_progress', 'ready_to_test', 'testing', 'done']
+
 export default function KanbanColumn({
   title,
   status,
   color,
   dotColor,
   tasks,
+  allTasks,
   onEdit,
   onDelete,
   onMove,
   onToggleChecklist,
 }) {
+  const currentIndex = STATUS_FLOW.indexOf(status)
+
+  const handleMoveBack = () => {
+    if (currentIndex > 0) {
+      onMove(tasks[0]?.id || '', STATUS_FLOW[currentIndex - 1])
+    }
+  }
+
   return (
-    <div className="flex-1 w-full bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 sm:p-5 flex flex-col min-h-[500px]">
+    <div className="flex-1 w-full min-w-[280px] bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 sm:p-5 flex flex-col min-h-[500px]">
       {/* Cabeçalho da Coluna */}
       <div className={`flex items-center justify-between pb-3 mb-4 border-b-2 ${color}`}>
         <div className="flex items-center gap-2.5">
           <span className={`w-3 h-3 rounded-full ${dotColor} animate-pulse`} />
-          <h2 className="font-bold text-slate-200 text-base sm:text-lg">{title}</h2>
+          <h2 className="font-bold text-slate-200 text-sm sm:text-base">{title}</h2>
         </div>
         <span className="bg-slate-800 text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-slate-700/50">
           {tasks.length}
@@ -40,6 +51,7 @@ export default function KanbanColumn({
             tasks.map((task) => {
               const completedCount = task.checklist ? task.checklist.filter((c) => c.completed).length : 0
               const totalCount = task.checklist ? task.checklist.length : 0
+              const linkedTask = allTasks?.find((t) => t.id === task.linkedTaskId)
 
               return (
                 <motion.div
@@ -77,7 +89,7 @@ export default function KanbanColumn({
                     </p>
                   )}
 
-                  {/* Tag e Data */}
+                  {/* Tag, Data e Vínculo */}
                   <div className="flex flex-wrap items-center gap-2 mb-3">
                     {task.tag && (
                       <span className="text-[11px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700/50 flex items-center gap-1">
@@ -87,6 +99,11 @@ export default function KanbanColumn({
                     {task.dueDate && (
                       <span className="text-[11px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md border border-slate-700/50 flex items-center gap-1">
                         📅 {task.dueDate}
+                      </span>
+                    )}
+                    {linkedTask && (
+                      <span className="text-[11px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md border border-indigo-500/20 flex items-center gap-1">
+                        🔗 {linkedTask.title}
                       </span>
                     )}
                   </div>
@@ -129,32 +146,22 @@ export default function KanbanColumn({
                   <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 gap-2">
                     {/* Botões Mover */}
                     <div className="flex items-center gap-1">
-                      {status !== 'todo' && (
+                      {currentIndex > 0 && (
                         <motion.button
                           whileTap={{ scale: 0.9 }}
-                          onClick={() =>
-                            onMove(
-                              task.id,
-                              status === 'done' ? 'in_progress' : 'todo'
-                            )
-                          }
+                          onClick={() => onMove(task.id, STATUS_FLOW[currentIndex - 1])}
                           title="Mover para trás"
-                          className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition-colors"
+                          className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition-colors cursor-pointer"
                         >
                           ◀
                         </motion.button>
                       )}
-                      {status !== 'done' && (
+                      {currentIndex < STATUS_FLOW.length - 1 && (
                         <motion.button
                           whileTap={{ scale: 0.9 }}
-                          onClick={() =>
-                            onMove(
-                              task.id,
-                              status === 'todo' ? 'in_progress' : 'done'
-                            )
-                          }
+                          onClick={() => onMove(task.id, STATUS_FLOW[currentIndex + 1])}
                           title="Mover para frente"
-                          className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition-colors"
+                          className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition-colors cursor-pointer"
                         >
                           ▶
                         </motion.button>
@@ -166,14 +173,14 @@ export default function KanbanColumn({
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => onEdit(task)}
-                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium transition-colors"
+                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium transition-colors cursor-pointer"
                       >
                         Editar
                       </motion.button>
                       <motion.button
                         whileTap={{ scale: 0.95 }}
                         onClick={() => onDelete(task.id)}
-                        className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-xs font-medium border border-rose-500/20 transition-colors"
+                        className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-xs font-medium border border-rose-500/20 transition-colors cursor-pointer"
                       >
                         Excluir
                       </motion.button>

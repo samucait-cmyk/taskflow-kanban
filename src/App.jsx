@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion'
 import Header from './components/Header'
 import KanbanColumn from './components/KanbanColumn'
 import TaskModal from './components/TaskModal'
+import Dashboard from './components/Dashboard'
 
 const initialTasks = [
   {
@@ -13,9 +14,9 @@ const initialTasks = [
     priority: 'Baixa',
     tag: 'Backend',
     dueDate: '2026-10-20',
+    linkedTaskId: '',
     checklist: [
       { id: 'c1', text: 'Filtrar por texto', completed: false },
-      { id: 'c2', text: 'Filtrar por prioridade e tag', completed: false },
     ],
   },
   {
@@ -26,22 +27,9 @@ const initialTasks = [
     priority: 'Média',
     tag: 'Design',
     dueDate: '2026-10-15',
+    linkedTaskId: '',
     checklist: [
       { id: 'c3', text: 'Desenhar esquema de cores', completed: true },
-      { id: 'c4', text: 'Criar componente de Cartão', completed: false },
-    ],
-  },
-  {
-    id: '3',
-    title: 'Configurar ambiente React',
-    description: 'Instalar dependências e organizar componentes.',
-    status: 'done',
-    priority: 'Alta',
-    tag: 'Frontend',
-    dueDate: '2026-10-10',
-    checklist: [
-      { id: 'c5', text: 'Instalar Node.js e Vite', completed: true },
-      { id: 'c6', text: 'Configurar Tailwind CSS', completed: true },
     ],
   },
 ]
@@ -59,11 +47,6 @@ export default function App() {
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
-
-  // Atualiza o tamanho de fonte global do documento (raiz html)
-  useEffect(() => {
-    document.documentElement.style.fontSize = fontSize
-  }, [fontSize])
 
   useEffect(() => {
     localStorage.setItem('taskflow_tasks', JSON.stringify(tasks))
@@ -132,7 +115,10 @@ export default function App() {
         setFontSize={setFontSize}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6">
+        {/* Dashboard de Indicadores */}
+        <Dashboard tasks={tasks} />
+
         {/* Barra de Filtros */}
         <div className="flex flex-col md:flex-row items-center gap-3 bg-slate-900/80 p-3.5 sm:p-4 rounded-2xl border border-slate-800/80 shadow-lg">
           <div className="relative flex-1 w-full">
@@ -173,14 +159,28 @@ export default function App() {
           </div>
         </div>
 
-        {/* Quadro Kanban */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+        {/* Quadro Kanban (6 Colunas com scroll horizontal em telas menores e grid fluido) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5 items-start">
           <KanbanColumn
             title="A Fazer"
             status="todo"
             color="border-amber-500"
             dotColor="bg-amber-500"
             tasks={filteredTasks.filter((t) => t.status === 'todo')}
+            allTasks={tasks}
+            onEdit={handleOpenModal}
+            onDelete={handleDeleteTask}
+            onMove={handleMoveTask}
+            onToggleChecklist={handleToggleChecklist}
+          />
+
+          <KanbanColumn
+            title="Bloqueado"
+            status="blocked"
+            color="border-rose-500"
+            dotColor="bg-rose-500"
+            tasks={filteredTasks.filter((t) => t.status === 'blocked')}
+            allTasks={tasks}
             onEdit={handleOpenModal}
             onDelete={handleDeleteTask}
             onMove={handleMoveTask}
@@ -193,6 +193,33 @@ export default function App() {
             color="border-indigo-500"
             dotColor="bg-indigo-500"
             tasks={filteredTasks.filter((t) => t.status === 'in_progress')}
+            allTasks={tasks}
+            onEdit={handleOpenModal}
+            onDelete={handleDeleteTask}
+            onMove={handleMoveTask}
+            onToggleChecklist={handleToggleChecklist}
+          />
+
+          <KanbanColumn
+            title="Pronto p/ Teste"
+            status="ready_to_test"
+            color="border-blue-500"
+            dotColor="bg-blue-500"
+            tasks={filteredTasks.filter((t) => t.status === 'ready_to_test')}
+            allTasks={tasks}
+            onEdit={handleOpenModal}
+            onDelete={handleDeleteTask}
+            onMove={handleMoveTask}
+            onToggleChecklist={handleToggleChecklist}
+          />
+
+          <KanbanColumn
+            title="Em Teste"
+            status="testing"
+            color="border-purple-500"
+            dotColor="bg-purple-500"
+            tasks={filteredTasks.filter((t) => t.status === 'testing')}
+            allTasks={tasks}
             onEdit={handleOpenModal}
             onDelete={handleDeleteTask}
             onMove={handleMoveTask}
@@ -205,6 +232,7 @@ export default function App() {
             color="border-emerald-500"
             dotColor="bg-emerald-500"
             tasks={filteredTasks.filter((t) => t.status === 'done')}
+            allTasks={tasks}
             onEdit={handleOpenModal}
             onDelete={handleDeleteTask}
             onMove={handleMoveTask}
@@ -218,6 +246,7 @@ export default function App() {
         {isModalOpen && (
           <TaskModal
             task={editingTask}
+            allTasks={tasks}
             onClose={() => {
               setIsModalOpen(false)
               setEditingTask(null)

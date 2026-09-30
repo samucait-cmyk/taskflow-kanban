@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 
-export default function TaskModal({ task, onClose, onSave }) {
+export default function TaskModal({ task, allTasks, onClose, onSave }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState('todo')
   const [priority, setPriority] = useState('Média')
   const [tag, setTag] = useState('Frontend')
   const [dueDate, setDueDate] = useState('')
+  const [linkedTaskId, setLinkedTaskId] = useState('')
   const [checklist, setChecklist] = useState([])
   const [newChecklistItem, setNewChecklistItem] = useState('')
+
+  // Data mínima de hoje para bloquear datas anteriores
+  const today = new Date().toISOString().split('T')[0]
 
   useEffect(() => {
     if (task) {
@@ -19,6 +23,7 @@ export default function TaskModal({ task, onClose, onSave }) {
       setPriority(task.priority || 'Média')
       setTag(task.tag || 'Frontend')
       setDueDate(task.dueDate || '')
+      setLinkedTaskId(task.linkedTaskId || '')
       setChecklist(task.checklist || [])
     }
   }, [task])
@@ -39,8 +44,11 @@ export default function TaskModal({ task, onClose, onSave }) {
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!title.trim()) return
-    onSave({ title, description, status, priority, tag, dueDate, checklist })
+    onSave({ title, description, status, priority, tag, dueDate, linkedTaskId, checklist })
   }
+
+  // Filtrar outras tarefas para vínculo (excluir a própria tarefa se estiver a editar)
+  const availableTasksToLink = allTasks ? allTasks.filter((t) => !task || t.id !== task.id) : []
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
@@ -57,7 +65,7 @@ export default function TaskModal({ task, onClose, onSave }) {
           </h2>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white text-xl font-bold p-1 rounded-lg hover:bg-slate-800 transition-colors"
+            className="text-slate-400 hover:text-white text-xl font-bold p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
           >
             ✕
           </button>
@@ -94,7 +102,7 @@ export default function TaskModal({ task, onClose, onSave }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Coluna (Status)
+                Status / Coluna
               </label>
               <select
                 value={status}
@@ -102,7 +110,10 @@ export default function TaskModal({ task, onClose, onSave }) {
                 className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="todo">A Fazer</option>
+                <option value="blocked">Bloqueado</option>
                 <option value="in_progress">Em Andamento</option>
+                <option value="ready_to_test">Pronto p/ Teste</option>
+                <option value="testing">Em Teste</option>
                 <option value="done">Concluído</option>
               </select>
             </div>
@@ -141,15 +152,35 @@ export default function TaskModal({ task, onClose, onSave }) {
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Data Limite
+                Data Limite (Mínimo: Hoje)
               </label>
               <input
                 type="date"
+                min={today}
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
                 className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
+          </div>
+
+          {/* Vincular a Outro Card */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              🔗 Vincular a outra Tarefa (Dependência)
+            </label>
+            <select
+              value={linkedTaskId}
+              onChange={(e) => setLinkedTaskId(e.target.value)}
+              className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="">Nenhuma tarefa vinculada</option>
+              {availableTasksToLink.map((t) => (
+                <option key={t.id} value={t.id}>
+                  📌 {t.title}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Checklist */}
@@ -168,7 +199,7 @@ export default function TaskModal({ task, onClose, onSave }) {
               <button
                 type="button"
                 onClick={handleAddChecklist}
-                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition-colors"
+                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
               >
                 Adicionar
               </button>
@@ -184,7 +215,7 @@ export default function TaskModal({ task, onClose, onSave }) {
                   <button
                     type="button"
                     onClick={() => handleRemoveChecklist(index)}
-                    className="text-rose-400 hover:text-rose-300 font-bold px-1"
+                    className="text-rose-400 hover:text-rose-300 font-bold px-1 cursor-pointer"
                   >
                     ✕
                   </button>
@@ -198,13 +229,13 @@ export default function TaskModal({ task, onClose, onSave }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-medium transition-colors"
+              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-medium transition-colors cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-indigo-600/30"
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-indigo-600/30 cursor-pointer"
             >
               Salvar
             </button>
