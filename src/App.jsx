@@ -53,6 +53,7 @@ export default function App() {
   const [selectedTag, setSelectedTag] = useState('All')
   const [selectedPriority, setSelectedPriority] = useState('All')
   
+  // Garantido estritamente como false para iniciar fechado
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState(null)
 

@@ -1,113 +1,98 @@
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 
-export default function TaskModal({ task, allTasks, onClose, onSave }) {
+export default function TaskModal({ isOpen = false, onClose, onSave, taskToEdit }) {
+  if (!isOpen) return null
+
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState('todo')
   const [priority, setPriority] = useState('Média')
-  const [tag, setTag] = useState('Frontend')
+  const [tag, setTag] = useState('Desenvolvimento')
   const [dueDate, setDueDate] = useState('')
-  const [linkedTaskId, setLinkedTaskId] = useState('')
-  const [checklist, setChecklist] = useState([])
-  const [newChecklistItem, setNewChecklistItem] = useState('')
-
-  // Data mínima de hoje para bloquear datas anteriores
-  const today = new Date().toISOString().split('T')[0]
 
   useEffect(() => {
-    if (task) {
-      setTitle(task.title || '')
-      setDescription(task.description || '')
-      setStatus(task.status || 'todo')
-      setPriority(task.priority || 'Média')
-      setTag(task.tag || 'Frontend')
-      setDueDate(task.dueDate || '')
-      setLinkedTaskId(task.linkedTaskId || '')
-      setChecklist(task.checklist || [])
+    if (taskToEdit) {
+      setTitle(taskToEdit.title || '')
+      setDescription(taskToEdit.description || '')
+      setStatus(taskToEdit.status || 'todo')
+      setPriority(taskToEdit.priority || 'Média')
+      setTag(taskToEdit.tag || 'Desenvolvimento')
+      setDueDate(taskToEdit.dueDate || '')
+    } else {
+      setTitle('')
+      setDescription('')
+      setStatus('todo')
+      setPriority('Média')
+      setTag('Desenvolvimento')
+      setDueDate(new Date().toISOString().split('T')[0])
     }
-  }, [task])
-
-  const handleAddChecklist = () => {
-    if (!newChecklistItem.trim()) return
-    setChecklist([
-      ...checklist,
-      { id: Date.now().toString(), text: newChecklistItem.trim(), completed: false },
-    ])
-    setNewChecklistItem('')
-  }
-
-  const handleRemoveChecklist = (index) => {
-    setChecklist(checklist.filter((_, i) => i !== index))
-  }
+  }, [taskToEdit, isOpen])
 
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!title.trim()) return
-    onSave({ title, description, status, priority, tag, dueDate, linkedTaskId, checklist })
+    onSave({
+      title,
+      description,
+      status,
+      priority,
+      tag,
+      dueDate,
+    })
   }
 
-  // Filtrar outras tarefas para vínculo (excluir a própria tarefa se estiver a editar)
-  const availableTasksToLink = allTasks ? allTasks.filter((t) => !task || t.id !== task.id) : []
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        transition={{ type: 'spring', duration: 0.25, bounce: 0.1 }}
-        className="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl overflow-y-auto max-h-[90vh]"
+        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+        className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl text-slate-100 flex flex-col gap-5 max-h-[90vh] overflow-y-auto"
       >
-        <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
-          <h2 className="text-lg font-bold text-white">
-            {task ? 'Editar Tarefa' : 'Nova Tarefa'}
+        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+          <h2 className="text-lg font-bold">
+            {taskToEdit ? 'Editar Tarefa' : 'Nova Tarefa'}
           </h2>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white text-xl font-bold p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+            className="text-slate-400 hover:text-white transition-colors cursor-pointer text-xl font-bold"
           >
             ✕
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Título *
-            </label>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-slate-300">Título *</label>
             <input
               type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Criar tela de login"
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+              placeholder="Ex: Criar tela de carregamento"
+              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-colors"
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Descrição
-            </label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-slate-300">Descrição</label>
             <textarea
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Detalhes adicionais da tarefa..."
-              className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm resize-none"
+              placeholder="Detalhes sobre a tarefa..."
+              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-colors resize-none"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Status / Coluna
-              </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-slate-300">Status / Coluna</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer"
               >
                 <option value="todo">A Fazer</option>
                 <option value="blocked">Bloqueado</option>
@@ -118,124 +103,59 @@ export default function TaskModal({ task, allTasks, onClose, onSave }) {
               </select>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Prioridade
-              </label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-slate-300">Prioridade</label>
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer"
               >
                 <option value="Baixa">Baixa</option>
                 <option value="Média">Média</option>
                 <option value="Alta">Alta</option>
+                <option value="Urgente">Urgente</option>
               </select>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Tag
-              </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-slate-300">Tag</label>
               <select
                 value={tag}
                 onChange={(e) => setTag(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer"
               >
-                <option value="Frontend">Frontend</option>
-                <option value="Backend">Backend</option>
                 <option value="Design">Design</option>
+                <option value="Desenvolvimento">Desenvolvimento</option>
+                <option value="Bug">Bug</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Pesquisa">Pesquisa</option>
               </select>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Data Limite (Mínimo: Hoje)
-              </label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-slate-300">Data Limite</label>
               <input
                 type="date"
-                min={today}
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500 transition-colors"
               />
             </div>
           </div>
 
-          {/* Vincular a Outro Card */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              🔗 Vincular a outra Tarefa (Dependência)
-            </label>
-            <select
-              value={linkedTaskId}
-              onChange={(e) => setLinkedTaskId(e.target.value)}
-              className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="">Nenhuma tarefa vinculada</option>
-              {availableTasksToLink.map((t) => (
-                <option key={t.id} value={t.id}>
-                  📌 {t.title}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Checklist */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Checklist
-            </label>
-            <div className="flex gap-2 mb-2">
-              <input
-                type="text"
-                value={newChecklistItem}
-                onChange={(e) => setNewChecklistItem(e.target.value)}
-                placeholder="Adicionar subtarefa..."
-                className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <button
-                type="button"
-                onClick={handleAddChecklist}
-                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
-              >
-                Adicionar
-              </button>
-            </div>
-
-            <div className="space-y-1.5 max-h-32 overflow-y-auto">
-              {checklist.map((item, index) => (
-                <div
-                  key={item.id || index}
-                  className="flex items-center justify-between p-2 bg-slate-950 border border-slate-800/80 rounded-lg text-xs text-slate-300"
-                >
-                  <span>{item.text}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveChecklist(index)}
-                    className="text-rose-400 hover:text-rose-300 font-bold px-1 cursor-pointer"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Botões de Ação */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm font-medium transition-colors cursor-pointer"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-colors cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-indigo-600/30 cursor-pointer"
+              className="px-5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20 cursor-pointer"
             >
               Salvar
             </button>
