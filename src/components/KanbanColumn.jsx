@@ -47,11 +47,14 @@ export default function KanbanColumn({
   onDelete,
   onMove,
   onToggleChecklist,
+  maxLimit = 4, // Limite WIP padrão por coluna
 }) {
   const currentIndex = STATUS_FLOW.indexOf(status)
+  const isOverLimit = tasks.length > maxLimit
 
   const handleDragOver = (e) => {
     e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
   }
 
   const handleDrop = (e) => {
@@ -66,18 +69,34 @@ export default function KanbanColumn({
     <div
       onDragOver={handleDragOver}
       onDrop={handleDrop}
-      className="flex-1 w-full min-w-[280px] bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 sm:p-5 flex flex-col min-h-[500px] transition-colors"
+      className={`flex-1 w-full min-w-[280px] bg-slate-900/60 border rounded-2xl p-4 sm:p-5 flex flex-col min-h-[500px] transition-colors ${
+        isOverLimit ? 'border-rose-500/60 shadow-lg shadow-rose-500/10' : 'border-slate-800/80'
+      }`}
     >
-      {/* Cabeçalho da Coluna */}
-      <div className={`flex items-center justify-between pb-3 mb-4 border-b-2 ${color}`}>
+      {/* Cabeçalho da Coluna com Indicador de WIP */}
+      <div className={`flex items-center justify-between pb-3 mb-2 border-b-2 ${color}`}>
         <div className="flex items-center gap-2.5">
           <span className={`w-3 h-3 rounded-full ${dotColor} animate-pulse`} />
           <h2 className="font-bold text-slate-200 text-sm sm:text-base">{title}</h2>
         </div>
-        <span className="bg-slate-800 text-slate-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-slate-700/50">
-          {tasks.length}
-        </span>
+        <div className="flex items-center gap-2">
+          {isOverLimit && (
+            <span className="text-[10px] bg-rose-500/20 text-rose-400 font-semibold px-2 py-0.5 rounded-full border border-rose-500/40 animate-pulse">
+              WIP Excedido
+            </span>
+          )}
+          <span
+            className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${
+              isOverLimit
+                ? 'bg-rose-500 text-white border-rose-600'
+                : 'bg-slate-800 text-slate-400 border-slate-700/50'
+            }`}
+          >
+            {tasks.length}/{maxLimit}
+          </span>
+        </div>
       </div>
+      <p className="text-[11px] text-slate-500 mb-4">Limite WIP: máx. {maxLimit} itens</p>
 
       {/* Lista de Tarefas Animada */}
       <div className="flex-1 flex flex-col gap-3.5">
@@ -98,10 +117,6 @@ export default function KanbanColumn({
               const linkedTask = allTasks?.find((t) => t.id === task.linkedTaskId)
               const dueDateBadge = getDueDateBadge(task.dueDate)
 
-              const handleDragStart = (e) => {
-                e.dataTransfer.setData('text/plain', task.id)
-              }
-
               return (
                 <motion.div
                   key={task.id}
@@ -112,19 +127,22 @@ export default function KanbanColumn({
                   whileHover={{ y: -3, transition: { duration: 0.2 } }}
                   transition={{ type: 'spring', stiffness: 350, damping: 25 }}
                 >
-                  {/* Elemento Arrastável isolado da animação de layout */}
                   <div
                     draggable={true}
-                    onDragStart={handleDragStart}
-                    className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 rounded-xl p-4 shadow-md hover:shadow-indigo-500/10 transition-colors group cursor-grab active:cursor-grabbing"
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', task.id)
+                      e.dataTransfer.effectAllowed = 'move'
+                    }}
+                    style={{ touchAction: 'none' }}
+                    className="bg-slate-900 border border-slate-800 hover:border-slate-700/90 rounded-xl p-4 shadow-md hover:shadow-indigo-500/15 transition-colors group cursor-grab active:cursor-grabbing select-none"
                   >
                     {/* Cabeçalho do Cartão */}
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <h3 className="font-semibold text-slate-100 text-sm sm:text-base leading-snug">
+                      <h3 className="font-semibold text-slate-100 text-sm sm:text-base leading-snug pointer-events-none">
                         {task.title}
                       </h3>
                       <span
-                        className={`text-[11px] font-medium px-2 py-0.5 rounded-md border shrink-0 ${
+                        className={`text-[11px] font-medium px-2 py-0.5 rounded-md border shrink-0 pointer-events-none ${
                           task.priority === 'Alta'
                             ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
                             : task.priority === 'Média'
@@ -138,13 +156,13 @@ export default function KanbanColumn({
 
                     {/* Descrição */}
                     {task.description && (
-                      <p className="text-xs sm:text-sm text-slate-400 mb-3 line-clamp-2">
+                      <p className="text-xs sm:text-sm text-slate-400 mb-3 line-clamp-2 pointer-events-none">
                         {task.description}
                       </p>
                     )}
 
                     {/* Tag, Data com Alerta e Vínculo */}
-                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                    <div className="flex flex-wrap items-center gap-2 mb-3 pointer-events-none">
                       {task.tag && (
                         <span className="text-[11px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700/50 flex items-center gap-1">
                           🏷️ {task.tag}
@@ -164,29 +182,33 @@ export default function KanbanColumn({
 
                     {/* Checklist */}
                     {totalCount > 0 && (
-                      <div className="mb-4 pt-2 border-t border-slate-800/60">
-                        <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1.5 font-medium">
+                      <div className="mb-4 pt-2 border-t border-slate-800/60" draggable={false}>
+                        <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1.5 font-medium pointer-events-none">
                           <span>Checklist</span>
                           <span>
                             {completedCount}/{totalCount}
                           </span>
                         </div>
-                        <div className="space-y-1.5">
+                        <div className="space-y-1.5" draggable={false}>
                           {task.checklist.map((item, index) => (
                             <label
                               key={item.id || index}
                               className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white transition-colors"
+                              draggable={false}
+                              onClick={(e) => e.stopPropagation()}
                             >
                               <input
                                 type="checkbox"
                                 checked={item.completed}
                                 onChange={() => onToggleChecklist(task.id, index)}
+                                draggable={false}
                                 className="w-3.5 h-3.5 rounded bg-slate-950 border-slate-700 text-indigo-600 focus:ring-indigo-500 accent-indigo-600 cursor-pointer"
                               />
                               <span
                                 className={
                                   item.completed ? 'line-through text-slate-500' : ''
                                 }
+                                draggable={false}
                               >
                                 {item.text}
                               </span>
@@ -197,14 +219,18 @@ export default function KanbanColumn({
                     )}
 
                     {/* Rodapé de Ações */}
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 gap-2">
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 gap-2" draggable={false}>
                       {/* Botões Mover */}
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1" draggable={false}>
                         {currentIndex > 0 && (
                           <motion.button
                             whileTap={{ scale: 0.9 }}
-                            onClick={() => onMove(task.id, STATUS_FLOW[currentIndex - 1])}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onMove(task.id, STATUS_FLOW[currentIndex - 1])
+                            }}
                             title="Mover para trás"
+                            draggable={false}
                             className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition-colors cursor-pointer"
                           >
                             ◀
@@ -213,8 +239,12 @@ export default function KanbanColumn({
                         {currentIndex < STATUS_FLOW.length - 1 && (
                           <motion.button
                             whileTap={{ scale: 0.9 }}
-                            onClick={() => onMove(task.id, STATUS_FLOW[currentIndex + 1])}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onMove(task.id, STATUS_FLOW[currentIndex + 1])
+                            }}
                             title="Mover para frente"
+                            draggable={false}
                             className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition-colors cursor-pointer"
                           >
                             ▶
@@ -223,17 +253,25 @@ export default function KanbanColumn({
                       </div>
 
                       {/* Editar e Excluir */}
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5" draggable={false}>
                         <motion.button
                           whileTap={{ scale: 0.95 }}
-                          onClick={() => onEdit(task)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onEdit(task)
+                          }}
+                          draggable={false}
                           className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium transition-colors cursor-pointer"
                         >
                           Editar
                         </motion.button>
                         <motion.button
                           whileTap={{ scale: 0.95 }}
-                          onClick={() => onDelete(task.id)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onDelete(task.id)
+                          }}
+                          draggable={false}
                           className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-xs font-medium border border-rose-500/20 transition-colors cursor-pointer"
                         >
                           Excluir

@@ -223,13 +223,14 @@ export default function App() {
           </div>
         </div>
 
-        {/* Quadro Kanban (6 Colunas) */}
+        {/* Quadro Kanban (6 Colunas com Limites WIP corporativos) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5 items-start">
           <KanbanColumn
             title="A Fazer"
             status="todo"
             color="border-amber-500"
             dotColor="bg-amber-500"
+            maxLimit={5}
             tasks={sortedTasks.filter((t) => t.status === 'todo')}
             allTasks={tasks}
             onEdit={handleOpenModal}
@@ -243,6 +244,7 @@ export default function App() {
             status="blocked"
             color="border-rose-500"
             dotColor="bg-rose-500"
+            maxLimit={3}
             tasks={sortedTasks.filter((t) => t.status === 'blocked')}
             allTasks={tasks}
             onEdit={handleOpenModal}
@@ -256,6 +258,7 @@ export default function App() {
             status="in_progress"
             color="border-indigo-500"
             dotColor="bg-indigo-500"
+            maxLimit={4}
             tasks={sortedTasks.filter((t) => t.status === 'in_progress')}
             allTasks={tasks}
             onEdit={handleOpenModal}
@@ -269,6 +272,7 @@ export default function App() {
             status="ready_to_test"
             color="border-blue-500"
             dotColor="bg-blue-500"
+            maxLimit={4}
             tasks={sortedTasks.filter((t) => t.status === 'ready_to_test')}
             allTasks={tasks}
             onEdit={handleOpenModal}
@@ -282,6 +286,7 @@ export default function App() {
             status="testing"
             color="border-purple-500"
             dotColor="bg-purple-500"
+            maxLimit={3}
             tasks={sortedTasks.filter((t) => t.status === 'testing')}
             allTasks={tasks}
             onEdit={handleOpenModal}
@@ -295,6 +300,7 @@ export default function App() {
             status="done"
             color="border-emerald-500"
             dotColor="bg-emerald-500"
+            maxLimit={10}
             tasks={sortedTasks.filter((t) => t.status === 'done')}
             allTasks={tasks}
             onEdit={handleOpenModal}
