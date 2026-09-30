@@ -50,7 +50,6 @@ export default function KanbanColumn({
 }) {
   const currentIndex = STATUS_FLOW.indexOf(status)
 
-  // Eventos de Drag and Drop para a Coluna
   const handleDragOver = (e) => {
     e.preventDefault()
   }
@@ -99,7 +98,6 @@ export default function KanbanColumn({
               const linkedTask = allTasks?.find((t) => t.id === task.linkedTaskId)
               const dueDateBadge = getDueDateBadge(task.dueDate)
 
-              // Evento ao iniciar o arrastamento do cartão
               const handleDragStart = (e) => {
                 e.dataTransfer.setData('text/plain', task.id)
               }
@@ -107,136 +105,140 @@ export default function KanbanColumn({
               return (
                 <motion.div
                   key={task.id}
-                  draggable={true}
-                  onDragStart={handleDragStart}
                   layout
                   initial={{ opacity: 0, y: 15, scale: 0.97 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.15 } }}
                   whileHover={{ y: -3, transition: { duration: 0.2 } }}
                   transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-                  className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 rounded-xl p-4 shadow-md hover:shadow-indigo-500/10 transition-colors group cursor-grab active:cursor-grabbing"
                 >
-                  {/* Cabeçalho do Cartão */}
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="font-semibold text-slate-100 text-sm sm:text-base leading-snug">
-                      {task.title}
-                    </h3>
-                    <span
-                      className={`text-[11px] font-medium px-2 py-0.5 rounded-md border shrink-0 ${
-                        task.priority === 'Alta'
-                          ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                          : task.priority === 'Média'
-                          ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                          : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                      }`}
-                    >
-                      {task.priority}
-                    </span>
-                  </div>
-
-                  {/* Descrição */}
-                  {task.description && (
-                    <p className="text-xs sm:text-sm text-slate-400 mb-3 line-clamp-2">
-                      {task.description}
-                    </p>
-                  )}
-
-                  {/* Tag, Data com Alerta e Vínculo */}
-                  <div className="flex flex-wrap items-center gap-2 mb-3">
-                    {task.tag && (
-                      <span className="text-[11px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700/50 flex items-center gap-1">
-                        🏷️ {task.tag}
+                  {/* Elemento Arrastável isolado da animação de layout */}
+                  <div
+                    draggable={true}
+                    onDragStart={handleDragStart}
+                    className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 rounded-xl p-4 shadow-md hover:shadow-indigo-500/10 transition-colors group cursor-grab active:cursor-grabbing"
+                  >
+                    {/* Cabeçalho do Cartão */}
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <h3 className="font-semibold text-slate-100 text-sm sm:text-base leading-snug">
+                        {task.title}
+                      </h3>
+                      <span
+                        className={`text-[11px] font-medium px-2 py-0.5 rounded-md border shrink-0 ${
+                          task.priority === 'Alta'
+                            ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                            : task.priority === 'Média'
+                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                        }`}
+                      >
+                        {task.priority}
                       </span>
-                    )}
-                    {dueDateBadge && (
-                      <span className={`text-[11px] px-2 py-0.5 rounded-md border font-medium flex items-center gap-1 ${dueDateBadge.style}`}>
-                        {dueDateBadge.label}
-                      </span>
-                    )}
-                    {linkedTask && (
-                      <span className="text-[11px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md border border-indigo-500/20 flex items-center gap-1">
-                        🔗 {linkedTask.title}
-                      </span>
-                    )}
-                  </div>
+                    </div>
 
-                  {/* Checklist */}
-                  {totalCount > 0 && (
-                    <div className="mb-4 pt-2 border-t border-slate-800/60">
-                      <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1.5 font-medium">
-                        <span>Checklist</span>
-                        <span>
-                          {completedCount}/{totalCount}
+                    {/* Descrição */}
+                    {task.description && (
+                      <p className="text-xs sm:text-sm text-slate-400 mb-3 line-clamp-2">
+                        {task.description}
+                      </p>
+                    )}
+
+                    {/* Tag, Data com Alerta e Vínculo */}
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      {task.tag && (
+                        <span className="text-[11px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700/50 flex items-center gap-1">
+                          🏷️ {task.tag}
                         </span>
-                      </div>
-                      <div className="space-y-1.5">
-                        {task.checklist.map((item, index) => (
-                          <label
-                            key={item.id || index}
-                            className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white transition-colors"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={item.completed}
-                              onChange={() => onToggleChecklist(task.id, index)}
-                              className="w-3.5 h-3.5 rounded bg-slate-950 border-slate-700 text-indigo-600 focus:ring-indigo-500 accent-indigo-600 cursor-pointer"
-                            />
-                            <span
-                              className={
-                                item.completed ? 'line-through text-slate-500' : ''
-                              }
+                      )}
+                      {dueDateBadge && (
+                        <span className={`text-[11px] px-2 py-0.5 rounded-md border font-medium flex items-center gap-1 ${dueDateBadge.style}`}>
+                          {dueDateBadge.label}
+                        </span>
+                      )}
+                      {linkedTask && (
+                        <span className="text-[11px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md border border-indigo-500/20 flex items-center gap-1">
+                          🔗 {linkedTask.title}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Checklist */}
+                    {totalCount > 0 && (
+                      <div className="mb-4 pt-2 border-t border-slate-800/60">
+                        <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1.5 font-medium">
+                          <span>Checklist</span>
+                          <span>
+                            {completedCount}/{totalCount}
+                          </span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {task.checklist.map((item, index) => (
+                            <label
+                              key={item.id || index}
+                              className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white transition-colors"
                             >
-                              {item.text}
-                            </span>
-                          </label>
-                        ))}
+                              <input
+                                type="checkbox"
+                                checked={item.completed}
+                                onChange={() => onToggleChecklist(task.id, index)}
+                                className="w-3.5 h-3.5 rounded bg-slate-950 border-slate-700 text-indigo-600 focus:ring-indigo-500 accent-indigo-600 cursor-pointer"
+                              />
+                              <span
+                                className={
+                                  item.completed ? 'line-through text-slate-500' : ''
+                                }
+                              >
+                                {item.text}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Rodapé de Ações */}
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 gap-2">
-                    {/* Botões Mover (Mantidos para compatibilidade com telemóveis onde arrastar é mais difícil) */}
-                    <div className="flex items-center gap-1">
-                      {currentIndex > 0 && (
-                        <motion.button
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => onMove(task.id, STATUS_FLOW[currentIndex - 1])}
-                          title="Mover para trás"
-                          className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition-colors cursor-pointer"
-                        >
-                          ◀
-                        </motion.button>
-                      )}
-                      {currentIndex < STATUS_FLOW.length - 1 && (
-                        <motion.button
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => onMove(task.id, STATUS_FLOW[currentIndex + 1])}
-                          title="Mover para frente"
-                          className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition-colors cursor-pointer"
-                        >
-                          ▶
-                        </motion.button>
-                      )}
-                    </div>
+                    {/* Rodapé de Ações */}
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 gap-2">
+                      {/* Botões Mover */}
+                      <div className="flex items-center gap-1">
+                        {currentIndex > 0 && (
+                          <motion.button
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => onMove(task.id, STATUS_FLOW[currentIndex - 1])}
+                            title="Mover para trás"
+                            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition-colors cursor-pointer"
+                          >
+                            ◀
+                          </motion.button>
+                        )}
+                        {currentIndex < STATUS_FLOW.length - 1 && (
+                          <motion.button
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => onMove(task.id, STATUS_FLOW[currentIndex + 1])}
+                            title="Mover para frente"
+                            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs transition-colors cursor-pointer"
+                          >
+                            ▶
+                          </motion.button>
+                        )}
+                      </div>
 
-                    {/* Editar e Excluir */}
-                    <div className="flex items-center gap-1.5">
-                      <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => onEdit(task)}
-                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium transition-colors cursor-pointer"
-                      >
-                        Editar
-                      </motion.button>
-                      <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => onDelete(task.id)}
-                        className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-xs font-medium border border-rose-500/20 transition-colors cursor-pointer"
-                      >
-                        Excluir
-                      </motion.button>
+                      {/* Editar e Excluir */}
+                      <div className="flex items-center gap-1.5">
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => onEdit(task)}
+                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+                        >
+                          Editar
+                        </motion.button>
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => onDelete(task.id)}
+                          className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-xs font-medium border border-rose-500/20 transition-colors cursor-pointer"
+                        >
+                          Excluir
+                        </motion.button>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
